@@ -33,7 +33,7 @@
         <p class="mt-2 text-sm text-gray-500 leading-relaxed">
           {plan.description}
         </p>
-        <div class="mt-auto pt-4 text-sm text-gray-600">
+        <div class="mb-auto pt-4 text-sm text-gray-600">
           Plan Includes:
           <ul class="list-disc list-inside mt-2 space-y-1">
             {#each plan.features as feature}

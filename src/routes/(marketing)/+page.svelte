@@ -235,7 +235,7 @@
       <div
         class="text-xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent mb-3 md:mb-7 pb-1"
       >
-        SaaS Starter Demo
+        Very Helpful DB
       </div>
 
       <div

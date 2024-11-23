@@ -9,8 +9,8 @@
   }
 
   // Page state
-  let loading = $state(false)
-  let showSuccess = $state(false)
+  let loading = false
+  let showSuccess = false
 
   type Field = {
     inputType?: string // default is "text"
@@ -22,10 +22,11 @@
   }
 
   interface Props {
-    // Module context
     editable?: boolean
     dangerous?: boolean
     title?: string
+    subtitle?: string // Optional subtitle
+    logo?: string // Optional logo
     message?: string
     fields: Field[]
     formTarget?: string
@@ -40,6 +41,8 @@
     editable = false,
     dangerous = false,
     title = "",
+    subtitle = "",
+    logo = "",
     message = "",
     fields,
     formTarget = "",
@@ -63,12 +66,24 @@
   }
 </script>
 
-<div class="card p-6 pb-7 mt-8 max-w-xl flex flex-col md:flex-row shadow">
-  {#if title}
-    <div class="text-xl font-bold mb-3 w-48 md:pr-8 flex-none">{title}</div>
-  {/if}
+<div class="card p-6 pb-7 mt-8 max-w-xl flex flex-col shadow">
+  <!-- Header Section -->
+  <div class="flex items-center mb-4">
+    {#if logo}
+      <img src={logo} alt="{title} logo" class="w-12 h-12 mr-4 flex-none" />
+    {/if}
+    <div class="flex-1">
+      {#if title}
+        <div class="text-xl font-bold">{title}</div>
+      {/if}
+      {#if subtitle}
+        <div class="text-sm text-gray-500">{subtitle}</div>
+      {/if}
+    </div>
+  </div>
 
-  <div class="w-full min-w-48">
+  <!-- Content Section -->
+  <div class="w-full">
     {#if !showSuccess}
       {#if message}
         <div class="mb-6 {dangerous ? 'alert alert-warning' : ''}">
@@ -78,18 +93,20 @@
               class="stroke-current shrink-0 h-6 w-6"
               fill="none"
               viewBox="0 0 24 24"
-              ><path
+            >
+              <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              /></svg
-            >
+              />
+            </svg>
           {/if}
-
           <span>{message}</span>
         </div>
       {/if}
+
+      <!-- Form Section -->
       <form
         class="form-widget flex flex-col"
         method="POST"
@@ -98,8 +115,8 @@
       >
         {#each fields as field}
           {#if field.label}
-            <label for={field.id}>
-              <span class="text-sm text-gray-500">{field.label}</span>
+            <label for={field.id} class="text-sm text-gray-500">
+              {field.label}
             </label>
           {/if}
           {#if editable}
@@ -111,7 +128,7 @@
               placeholder={field.placeholder ?? field.label ?? ""}
               class="{fieldError($page?.form, field.id)
                 ? 'input-error'
-                : ''} input-sm mt-1 input input-bordered w-full max-w-xs mb-3 text-base py-4"
+                : ''} input-sm mt-1 input input-bordered w-full max-w-xs mb-3 text-base py-2"
               value={$page.form ? $page.form[field.id] : field.initialValue}
               maxlength={field.maxlength ? field.maxlength : null}
             />
@@ -126,6 +143,7 @@
           </p>
         {/if}
 
+        <!-- Button Section -->
         {#if editable}
           <div>
             <button
@@ -145,8 +163,7 @@
             </button>
           </div>
         {:else if editButtonTitle && editLink}
-          <!-- !editable -->
-          <a href={editLink} class="mt-1">
+          <a href={editLink} class="mt-3 inline-block">
             <button
               class="btn btn-outline btn-sm {dangerous
                 ? 'btn-error'
@@ -158,7 +175,7 @@
         {/if}
       </form>
     {:else}
-      <!-- showSuccess -->
+      <!-- Success Section -->
       <div>
         <div class="text-l font-bold">{successTitle}</div>
         <div class="text-base">{successBody}</div>
