@@ -319,7 +319,7 @@ After the steps above, you’ll have a working version like the demo page. Howev
 - Site Search: any [prerendered](https://kit.svelte.dev/docs/page-options#prerender) content will automatically be indexed by the site search. To exclude a page, add it to `excludePaths` in `src/lib/build_index.ts`.
 - Functionality
   - Add actual SaaS functionality!
-  - Replace the admin dashboard with real content (`/src/routes/(admin)/account/+page.svelte`).
+  - Replace the admin dashboard with real content (`/src/routes/(admin)/app/+page.svelte`).
   - Add API endpoints and database tables as needed to deliver your SaaS product.
 - Analytics: optionally add analytics to your project. [guide](/analytics_docs.md)
 

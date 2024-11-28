@@ -24,13 +24,13 @@ SaaS Starter includes a welcome email template that you can customize to fit you
 
 To customize the email:
 
-- edit the properties like company name, from email, and subject in the call to sendTemplatedEmail in src/routes/(admin)/account/api/+page.server.ts
+- edit the properties like company name, from email, and subject in the call to sendTemplatedEmail in src/routes/(admin)/app/api/+page.server.ts
 - edit the plaintext email content in src/lib/emails/welcome_email_text.hbs
 - edit the html email content in src/lib/emails/welcome_email_html.hbs - don't forget address and preheader text which won't render in a preview, but will in the client's email client.
 
 **Note**: use triple braces for properties in plaintext emails, and double braces for html emails. See the [handlebars documentation](https://handlebarsjs.com/guide/expressions.html#html-escaping) for more information.
 
-You can also delete the welcome email by removing the call to sendTemplatedEmail in src/routes/(admin)/account/api/+page.server.ts
+You can also delete the welcome email by removing the call to sendTemplatedEmail in src/routes/(admin)/app/api/+page.server.ts
 
 ## Adding Admin Emails
 
