@@ -135,7 +135,8 @@
         {/if}
 
         <!-- Show "Workflows" menu item only if Zapier is connected -->
-        {#if isServiceConnected("zapier")}
+        {#if true}
+          <!-- //isServiceConnected("zapier")} -->
           <li>
             <a
               href="/app/workflows"

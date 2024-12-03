@@ -1,0 +1,44 @@
+{
+  "zaps": [
+    {
+      "id": "zap1",
+      "title": "New Email -> Slack Notification",
+      "description": "When a new email is received, send a Slack notification.",
+      "status": "on",
+      "created_at": "2023-11-01T10:00:00Z",
+      "updated_at": "2023-11-15T10:00:00Z",
+      "owner_email": "user@example.com",
+      "trigger": {
+        "type": "email",
+        "title": "New Email"
+      },
+      "actions": [
+        {
+          "id": "action1",
+          "type": "slack",
+          "title": "Send Slack Notification"
+        }
+      ]
+    },
+    {
+      "id": "zap2",
+      "title": "Form Submission -> Google Sheet",
+      "description": "When a form is submitted, save data to a Google Sheet.",
+      "status": "off",
+      "created_at": "2023-10-20T09:00:00Z",
+      "updated_at": "2023-11-10T15:30:00Z",
+      "owner_email": "user@example.com",
+      "trigger": {
+        "type": "form",
+        "title": "New Form Submission"
+      },
+      "actions": [
+        {
+          "id": "action2",
+          "type": "google_sheets",
+          "title": "Add Row to Google Sheet"
+        }
+      ]
+    }
+  ]
+}

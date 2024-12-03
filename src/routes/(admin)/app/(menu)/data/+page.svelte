@@ -3,6 +3,8 @@
   import { onMount } from "svelte"
   import { goto } from "$app/navigation"
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte"
+  import type { Writable } from "svelte/store"
+  import { getContext } from "svelte"
 
   // Get the tables from the server-side load function
   export let data
@@ -45,11 +47,21 @@
         alert("Failed to copy endpoint to clipboard.")
       })
   }
+
+  let adminSection: Writable<string> = getContext("adminSection")
+  adminSection.set("data")
 </script>
 
 <Breadcrumbs />
 
 <h1 class="text-2xl font-bold mb-4">Data</h1>
+
+<!-- Action Toolbar -->
+<div class="mb-4 flex justify-end">
+  <button class="btn btn-primary" on:click={() => goto("/app/data/new")}>
+    Create New Table
+  </button>
+</div>
 
 <table class="table-auto w-full border">
   <thead>

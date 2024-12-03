@@ -1,0 +1,33 @@
+{
+  "zap1": [
+    {
+      "id": "action1",
+      "type": "slack",
+      "title": "Send Slack Notification",
+      "params": {
+        "channel": "#general",
+        "message": "A new email has arrived!"
+      },
+      "status": "on",
+      "created_at": "2023-11-01T10:15:00Z",
+      "updated_at": "2023-11-15T10:30:00Z"
+    }
+  ],
+  "zap2": [
+    {
+      "id": "action2",
+      "type": "google_sheets",
+      "title": "Add Row to Google Sheet",
+      "params": {
+        "spreadsheet_id": "sheet1",
+        "worksheet_name": "Sheet1",
+        "data": {
+          "Column1": "{{form.name}}",
+          "Column2": "{{form.email}}",
+          "Column3": "{{form.message}}"
+        }
+      },
+      "status": "on"
+    }
+  ]
+}
