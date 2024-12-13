@@ -9,7 +9,7 @@ import {
 } from "@supabase/ssr"
 import { redirect } from "@sveltejs/kit"
 import type { Database } from "../../../DatabaseDefinitions.js"
-import { CreateProfileStep } from "../../../config"
+import { CreateProfileStep } from "../../../config.js"
 import { load_helper } from "$lib/load_helpers"
 
 export const load = async ({ fetch, data, depends, url }) => {
@@ -17,20 +17,20 @@ export const load = async ({ fetch, data, depends, url }) => {
 
   const supabase = isBrowser()
     ? createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-        global: {
-          fetch,
-        },
-      })
+      global: {
+        fetch,
+      },
+    })
     : createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-        global: {
-          fetch,
+      global: {
+        fetch,
+      },
+      cookies: {
+        getAll() {
+          return data.cookies
         },
-        cookies: {
-          getAll() {
-            return data.cookies
-          },
-        },
-      })
+      },
+    })
 
   const { session, user } = await load_helper(data.session, supabase)
   if (!session || !user) {

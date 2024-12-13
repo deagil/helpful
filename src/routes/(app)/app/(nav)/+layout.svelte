@@ -6,15 +6,9 @@
   import { onMount } from "svelte"
   import { page } from "$app/stores"
 
-  interface Props {
-    children?: import("svelte").Snippet
-  }
-
-  let { children }: Props = $props()
-
   const adminSectionStore = writable("")
   setContext("adminSection", adminSectionStore)
-  let adminSection: string | undefined = $state()
+  let adminSection: string | undefined
   adminSectionStore.subscribe((value) => {
     adminSection = value
   })
@@ -29,7 +23,7 @@
   }
 
   let services = []
-  let servicesLoaded = $state(false)
+  let servicesLoaded = false
 
   onMount(async () => {
     const response = await fetch("/api/services")
@@ -44,49 +38,55 @@
 
   const isServiceConnected = (appName: string) => {
     const service = services.find((s) => s.id === appName)
-    console.log(service)
     return service && service.connected === true
   }
+
+  // Update adminSection dynamically based on route
+  $: adminSection = page?.route?.id?.split("/").at(-1) || ""
 </script>
 
 <div class="drawer lg:drawer-open">
   <input id="admin-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content">
+    <!-- Navbar for Mobile -->
     <div class="navbar bg-base-100 lg:hidden">
       <div class="flex-1">
         <a class="btn btn-ghost normal-case text-xl" href="/">{WebsiteName}</a>
       </div>
       <div class="flex-none">
-        <div class="dropdown dropdown-end">
-          <label for="admin-drawer" class="btn btn-ghost btn-circle">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h7"
-              />
-            </svg>
-          </label>
-        </div>
+        <label for="admin-drawer" class="btn btn-ghost btn-circle text-lg">
+          🍔
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h7"
+            />
+          </svg>
+        </label>
       </div>
     </div>
+
+    <!-- Page Content -->
     <div class="container px-6 lg:px-12 py-3 lg:py-6">
-      {@render children?.()}
+      <slot />
     </div>
   </div>
 
+  <!-- Drawer Sidebar -->
   <div class="drawer-side">
     <label for="admin-drawer" class="drawer-overlay"></label>
     <ul
-      class="menu menu-lg p-4 w-80 min-h-full bg-base-200 lg:border-r text-base-content"
+      class="menu menu-lg p-4 w-80 min-h-full bg-base-200 lg:border-r text-base-content flex flex-col"
     >
+      <!-- Sidebar Header -->
       <li>
         <div
           class="normal-case menu-title text-xl font-bold text-primary flex flex-row"
@@ -95,6 +95,8 @@
           <label for="admin-drawer" class="lg:hidden ml-3"> &#x2715; </label>
         </div>
       </li>
+
+      <!-- Menu Items -->
       <li>
         <a
           href="/app/home"
@@ -105,7 +107,6 @@
         </a>
       </li>
 
-      <!-- Show "Data" menu item only if Supabase is connected -->
       {#if servicesLoaded}
         {#if isServiceConnected("supabase")}
           <li>
@@ -117,58 +118,37 @@
               💾 Data
             </a>
           </li>
-        {:else}
-          <!-- Optionally, show a disabled menu item or nothing -->
-          <li>
-            <a
-              href="/app/settings/supabase"
-              class="cursor-not-allowed opacity-50"
-              onclick={(e) => {
-                e.preventDefault()
-                closeDrawer()
-              }}
-              title="Connect Supabase to access Data"
-            >
-              💾 Data
-            </a>
-          </li>
         {/if}
-
-        <!-- Show "Workflows" menu item only if Zapier is connected -->
-        {#if true}
-          <!-- //isServiceConnected("zapier")} -->
-          <li>
-            <a
-              href="/app/workflows"
-              class={adminSection === "workflows" ? "active" : ""}
-              onclick={closeDrawer}
-            >
-              📨 Workflows
-            </a>
-          </li>
-        {:else}
-          <!-- Optionally, show a disabled menu item or nothing -->
-          <li>
-            <a
-              href="/app/settings/zapier"
-              class="cursor-not-allowed opacity-50"
-              onclick={(e) => {
-                e.preventDefault()
-                closeDrawer()
-              }}
-              title="Connect Zapier to access Workflows"
-            >
-              📨 Workflows
-            </a>
-          </li>
-        {/if}
-      {:else}
-        <!-- Optionally, show a loading state or placeholders -->
         <li>
-          <span>Loading services...</span>
+          <a
+            href="/app/workflows"
+            class={adminSection === "workflows" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            📨 Workflows
+          </a>
+        </li>
+        <li>
+          <a
+            href="/app/logs"
+            class={adminSection === "logs" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            🪵 Logs
+          </a>
+        </li>
+        <li>
+          <a
+            href="/app/docs"
+            class={adminSection === "docs" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            📚 Docs
+          </a>
         </li>
       {/if}
 
+      <!-- Settings -->
       <li>
         <a
           href="/app/settings"
@@ -179,8 +159,9 @@
         </a>
       </li>
 
+      <!-- Sign Out Button -->
       <li class="mt-auto">
-        <a href="/app/sign_out" class="mt-auto text-base">Sign Out</a>
+        <a href="/app/sign_out" class="text-base">Sign Out</a>
       </li>
     </ul>
   </div>

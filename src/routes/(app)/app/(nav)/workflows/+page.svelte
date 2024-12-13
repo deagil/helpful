@@ -3,6 +3,7 @@
   import { fetchZaps } from "$lib/mocks/mockZapierApi"
   import type { Writable } from "svelte/store"
   import { getContext } from "svelte"
+  import Breadcrumbs from "$lib/components/Breadcrumbs.svelte"
 
   let zaps = []
   let selectedZap = null
@@ -18,6 +19,8 @@
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("workflows")
 </script>
+
+<Breadcrumbs />
 
 <svelte:head>
   <title>Workflows</title>

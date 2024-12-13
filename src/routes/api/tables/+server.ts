@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import pkg from 'pg';
 import { createClient } from '@supabase/supabase-js';
-import { decrypt } from '$lib/crypto'; // Assuming you have a `decrypt` function in `$lib/crypto`
+import { decrypt } from '$lib/server/crypto'; // Assuming you have a `decrypt` function in `$lib/crypto`
 import { PUBLIC_SUPABASE_URL } from "$env/static/public"
 import { PUBLIC_SUPABASE_ANON_KEY } from "$env/static/public"
 import { PRIVATE_SUPABASE_SERVICE_ROLE } from '$env/static/private';

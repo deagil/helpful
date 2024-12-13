@@ -1,7 +1,7 @@
-// src/routes/app/data/+page.server.js
+// src/routes/(admin)/app/(menu)/logs/+page.server.js
 import { error } from '@sveltejs/kit';
 import pkg from 'pg';
-import { decrypt } from '$lib/crypto';
+import { decrypt } from '$lib/server/crypto';
 
 const { Client } = pkg;
 
@@ -32,7 +32,7 @@ export async function load({ locals }) {
     throw error(500, 'Database connection string not found');
   }
 
-  // Connect to the user's database and fetch tables
+  // Connect to the user's database and fetch error logs
   let client;
   try {
     let ssl;
@@ -49,41 +49,39 @@ export async function load({ locals }) {
 
     await client.connect();
 
-    // Fetch table details
+    // Fetch error logs
     const res = await client.query(`
       SELECT
-        c.relname AS table_name,
-        obj_description(c.oid) AS description,
-        c.reltuples AS row_estimate,
-        COUNT(a.attname) AS column_count
+        id,
+        severity,
+        message,
+        stack,
+        context,
+        created_at
       FROM
-        pg_class c
-        LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-        LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-      WHERE
-        c.relkind = 'r'
-        AND n.nspname = 'public'
-      GROUP BY
-        c.relname, c.oid, c.reltuples
+        config.error_logs
       ORDER BY
-        c.relname;
+        created_at DESC
+      LIMIT 100; -- Adjust the limit as needed
     `);
 
-    const tables = res.rows.map((row) => ({
-      table_name: row.table_name,
-      description: row.description || '',
-      row_estimate: parseInt(row.row_estimate, 10),
-      column_count: parseInt(row.column_count, 10),
+    const errorLogs = res.rows.map((row) => ({
+      id: row.id,
+      severity: row.severity,
+      message: row.message,
+      stack: row.stack,
+      context: row.context,
+      created_at: row.created_at,
     }));
 
     await client.end();
 
-    return { tables };
+    return { errorLogs };
   } catch (err) {
-    console.error('Error fetching tables:', err);
+    console.error('Error fetching error logs:', err);
     if (client) {
       await client.end();
     }
-    throw error(500, 'Failed to fetch tables from the database');
+    throw error(500, 'Failed to fetch error logs from the database');
   }
 }

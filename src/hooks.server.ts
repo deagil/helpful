@@ -6,8 +6,9 @@ import {
 } from "$env/static/public"
 import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js"
-import type { Handle } from "@sveltejs/kit"
+import type { redirect, Handle, HandleServerError, HttpError } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks"
+import { logError } from '$lib/server/logger';
 
 export const supabase: Handle = async ({ event, resolve }) => {
   event.locals.supabase = createServerClient(
@@ -94,4 +95,26 @@ const authGuard: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-export const handle: Handle = sequence(supabase, authGuard)
+const errorHandler: Handle = async ({ event, resolve }) => {
+  try {
+    return await resolve(event);
+  } catch (err) {
+    // Check if the error is a redirect
+    if (err && typeof err === 'object' && 'status' in err && 'location' in err) {
+      // It's a redirect, re-throw it
+      throw err;
+    }
+    // Check if the error is an HTTP error
+    if (err && typeof err === 'object' && 'status' in err && 'body' in err) {
+      // Re-throw HTTP errors
+      throw err;
+    }
+    // For other errors, log and re-throw
+    await logError('Unhandled server error', { event, error: err },);
+    throw err;
+  }
+};
+
+// Combine handlers
+//export const handle: Handle = sequence(supabase, authGuard);
+export const handle: Handle = sequence(errorHandler, supabase, authGuard);

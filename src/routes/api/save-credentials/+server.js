@@ -1,6 +1,6 @@
 // src/routes/api/save-credentials/+server.js
 import { json } from '@sveltejs/kit';
-import { encrypt, decrypt } from '$lib/crypto';
+import { encrypt, decrypt } from '$lib/server/crypto';
 
 export async function POST({ request, locals }) {
   try {

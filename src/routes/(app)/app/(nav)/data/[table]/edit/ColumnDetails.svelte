@@ -4,13 +4,17 @@
 
   export let selectedColumn
 
-  // Stores for tables and columns
   let tables = []
   let columns = writable([])
 
-  // Fetch list of tables on component mount
   onMount(async () => {
     await fetchTables()
+    if (
+      selectedColumn.data_type === "foreign_key" &&
+      selectedColumn.foreign_table
+    ) {
+      await fetchColumns(selectedColumn.foreign_table)
+    }
   })
 
   async function fetchTables() {
@@ -28,12 +32,10 @@
   }
 
   async function fetchColumns(tableName) {
-    console.log("fetchColumns called with tableName:", tableName) // Debugging log
-
-    let testvar = "/api/columns/" + tableName
-
+    console.log("fetchColumns called with tableName:", tableName)
+    let url = "/api/columns/" + tableName
     try {
-      const response = await fetch(testvar)
+      const response = await fetch(url)
       const data = await response.json()
       if (data.columns) {
         columns.set(data.columns)
@@ -45,8 +47,11 @@
     }
   }
 
-  // Reactive statement to fetch columns when a table is selected
-  $: if (selectedColumn.foreign_table) {
+  $: if (
+    selectedColumn &&
+    selectedColumn.data_type === "foreign_key" &&
+    selectedColumn.foreign_table
+  ) {
     console.log(`Fetching columns for ${selectedColumn.foreign_table} table`)
     fetchColumns(selectedColumn.foreign_table)
   }
@@ -59,14 +64,13 @@
       selectedColumn[name] = value
     }
 
-    // Reset foreign key fields if data type changes
-    if (name === "data_type" && value !== "foreign_key") {
-      delete selectedColumn.foreign_table
-      delete selectedColumn.foreign_column
-    }
-
-    // Reset default value fields if data type changes
+    // Reset foreign key fields if data type changes away from foreign_key
     if (name === "data_type") {
+      if (value !== "foreign_key") {
+        delete selectedColumn.foreign_table
+        delete selectedColumn.foreign_column
+      }
+      // Reset default-related fields if data type changes
       delete selectedColumn.default_value_option
       delete selectedColumn.default_value
       delete selectedColumn.computed_value
@@ -78,7 +82,6 @@
     selectedColumn[name] = value
   }
 
-  // Function to handle quality-of-life features
   function handleQoLChange(event) {
     const { name, checked } = event.target
     selectedColumn[name] = checked
@@ -86,7 +89,7 @@
 </script>
 
 <div>
-  <!-- Column Name -->
+  <!-- Internal Field Name -->
   <div class="mb-4">
     <label class="block font-medium text-sm uppercase font-[Departure]"
       >Internal Field Name</label
@@ -100,23 +103,29 @@
         class="input input-bordered w-full"
       /></code
     >
+    <p class="text-xs text-gray-500 mt-1">
+      This is the database column name used internally.
+    </p>
   </div>
 
-  <!-- Column Label -->
+  <!-- User Facing Field Name -->
   <div class="mb-4">
     <label class="block font-medium text-sm uppercase font-[Departure]"
       >User Facing Field Name</label
     >
     <input
       type="text"
-      name="column_label"
-      bind:value={selectedColumn.column_label}
+      name="user_facing_label"
+      bind:value={selectedColumn.user_facing_label}
       on:input={handleInputChange}
       class="input input-bordered w-full"
     />
+    <p class="text-xs text-gray-500 mt-1">
+      A friendly label for end-users. Appears in forms and UI.
+    </p>
   </div>
 
-  <!-- Description -->
+  <!-- Description (DB comment) -->
   <div class="mb-4">
     <label class="block font-medium text-sm uppercase font-[Departure]"
       >Description</label
@@ -127,6 +136,25 @@
       on:input={handleInputChange}
       class="textarea textarea-bordered w-full"
     ></textarea>
+    <p class="text-xs text-gray-500 mt-1">
+      A database-level comment describing this column’s purpose.
+    </p>
+  </div>
+
+  <!-- Help Text -->
+  <div class="mb-4">
+    <label class="block font-medium text-sm uppercase font-[Departure]"
+      >Help Text</label
+    >
+    <textarea
+      name="help_text"
+      bind:value={selectedColumn.help_text}
+      on:input={handleInputChange}
+      class="textarea textarea-bordered w-full"
+    ></textarea>
+    <p class="text-xs text-gray-500 mt-1">
+      Short instructions or clarifications shown to users.
+    </p>
   </div>
 
   <!-- Data Type -->
@@ -147,13 +175,39 @@
       <option value="uuid">UUID</option>
       <option value="boolean">Boolean</option>
       <option value="foreign_key">Foreign Key</option>
-      <!-- Add more data types as needed -->
     </select>
+    <details class="mt-2">
+      <summary class="text-sm text-blue-500 cursor-pointer"
+        >Data Type Help</summary
+      >
+      <div class="text-sm text-gray-500 mt-1 space-y-1">
+        <p>
+          <strong>Text:</strong> Arbitrary strings, set length or defaults as needed.
+        </p>
+        <p>
+          <strong>Integer:</strong> Numeric values, can specify min/max, defaults.
+        </p>
+        <p>
+          <strong>Date / Timestamp:</strong> Store dates/times, often paired with
+          computed defaults like NOW().
+        </p>
+        <p>
+          <strong>UUID:</strong> Unique identifiers, often default to gen_random_uuid().
+        </p>
+        <p>
+          <strong>Boolean:</strong> True/False values. Can add QoL features like
+          timestamping changes.
+        </p>
+        <p>
+          <strong>Foreign Key:</strong> Link to another table’s record for relational
+          data modeling.
+        </p>
+      </div>
+    </details>
   </div>
 
-  <!-- Conditional Fields Based on Data Type -->
+  <!-- Data-type specific fields -->
   {#if selectedColumn.data_type === "integer"}
-    <!-- Integer Specific Options -->
     <div class="mb-4">
       <label class="block font-medium text-sm uppercase font-[Departure]"
         >Minimum Value</label
@@ -179,7 +233,6 @@
       />
     </div>
   {:else if selectedColumn.data_type === "text"}
-    <!-- Text Specific Options -->
     <div class="mb-4">
       <label class="block font-medium text-sm uppercase font-[Departure]"
         >Maximum Length</label
@@ -193,7 +246,6 @@
       />
     </div>
   {:else if selectedColumn.data_type === "foreign_key"}
-    <!-- Foreign Key Specific Options -->
     <div class="mb-4">
       <label class="block font-medium text-sm uppercase font-[Departure]"
         >Link to which object?</label
@@ -205,10 +257,13 @@
         class="select select-bordered w-full"
       >
         <option value="" disabled selected>Select a table</option>
-        {#each tables as table}
-          <option value={table}>{table}</option>
+        {#each tables as t}
+          <option value={t}>{t}</option>
         {/each}
       </select>
+      <p class="text-xs text-gray-500 mt-1">
+        Choose the table this foreign key references.
+      </p>
     </div>
     {#if selectedColumn.foreign_table}
       <div class="mb-4">
@@ -222,38 +277,52 @@
           class="select select-bordered w-full"
         >
           <option value="" disabled selected>Select a column</option>
-          {#each $columns as column}
-            <option value={column}>{column}</option>
+          {#each $columns as colName}
+            <option value={colName}>{colName}</option>
           {/each}
         </select>
+        <p class="text-xs text-gray-500 mt-1">
+          Which column in the linked table identifies the related record?
+        </p>
       </div>
     {/if}
   {/if}
 
-  <!-- Common Constraints -->
+  <!-- Constraints -->
   <div class="mb-4">
-    <label class="inline-flex items-center">
-      <input
-        type="checkbox"
-        name="not_null"
-        bind:checked={selectedColumn.not_null}
-        on:change={handleInputChange}
-        class="checkbox"
-      />
-      <span class="ml-2">Not Null</span>
-    </label>
-  </div>
-  <div class="mb-4">
-    <label class="inline-flex items-center">
-      <input
-        type="checkbox"
-        name="is_unique"
-        bind:checked={selectedColumn.is_unique}
-        on:change={handleInputChange}
-        class="checkbox"
-      />
-      <span class="ml-2">Unique</span>
-    </label>
+    <div class="space-x-4 flex items-center">
+      <label class="inline-flex items-center">
+        <input
+          type="checkbox"
+          name="not_null"
+          bind:checked={selectedColumn.not_null}
+          on:change={handleInputChange}
+          class="checkbox"
+        />
+        <span class="ml-2">Not Null</span>
+      </label>
+      <label class="inline-flex items-center">
+        <input
+          type="checkbox"
+          name="is_unique"
+          bind:checked={selectedColumn.is_unique}
+          on:change={handleInputChange}
+          class="checkbox"
+        />
+        <span class="ml-2">Unique</span>
+      </label>
+    </div>
+    <details class="mt-2">
+      <summary class="text-sm text-blue-500 cursor-pointer"
+        >Constraints Info</summary
+      >
+      <div class="text-sm text-gray-500 mt-1 space-y-1">
+        <p><strong>Not Null:</strong> Field must always have a value.</p>
+        <p>
+          <strong>Unique:</strong> All values must be distinct; no duplicates allowed.
+        </p>
+      </div>
+    </details>
   </div>
 
   <!-- Default Value -->
@@ -269,8 +338,20 @@
     >
       <option value="">No value</option>
       <option value="computed">Computed</option>
-      <option value="manual">Manually set default value</option>
+      <option value="manual">Manual</option>
     </select>
+    <details class="mt-2">
+      <summary class="text-sm text-blue-500 cursor-pointer"
+        >Default & Computed Values Info</summary
+      >
+      <div class="text-sm text-gray-500 mt-1 space-y-1">
+        <p><strong>No value:</strong> Must be provided manually.</p>
+        <p>
+          <strong>Computed:</strong> Automatically generated (e.g., NOW(), gen_random_uuid()).
+        </p>
+        <p><strong>Manual:</strong> A fixed value you supply.</p>
+      </div>
+    </details>
   </div>
 
   {#if selectedColumn.default_value_option === "computed"}
@@ -287,11 +368,12 @@
         {#if selectedColumn.data_type === "uuid"}
           <option value="gen_random_uuid()">Generate Random UUID</option>
         {:else if selectedColumn.data_type === "date" || selectedColumn.data_type === "timestamp"}
-          <option value="NOW()">Current Date/Time</option>
+          <option value="NOW()">Current Date/Time (NOW)</option>
+          <option value="CURRENT_TIMESTAMP">CURRENT_TIMESTAMP</option>
         {:else if selectedColumn.data_type === "text"}
           <option value="current_user">Current User</option>
         {/if}
-        <!-- Add more computed options as needed -->
+        <!-- Add more computed options if needed -->
       </select>
     </div>
   {:else if selectedColumn.default_value_option === "manual"}
@@ -306,10 +388,10 @@
         on:input={handleDefaultValueChange}
         class="input input-bordered w-full"
       />
+      <p class="text-xs text-gray-500 mt-1">Provide a static default value.</p>
     </div>
   {/if}
 
-  <!-- Quality-of-Life Features -->
   {#if selectedColumn.data_type === "boolean"}
     <div class="mb-4">
       <label class="inline-flex items-center">
@@ -320,22 +402,26 @@
           on:change={handleQoLChange}
           class="checkbox"
         />
-        <span class="ml-2">Add timestamp when set</span>
+        <span class="ml-2">Add timestamp when toggled</span>
       </label>
+      {#if selectedColumn.add_timestamp}
+        <div class="mt-2">
+          <label class="block font-medium text-sm uppercase font-[Departure]"
+            >Timestamp Field Name</label
+          >
+          <input
+            type="text"
+            name="timestamp_field_name"
+            bind:value={selectedColumn.timestamp_field_name}
+            on:input={handleInputChange}
+            class="input input-bordered w-full"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            When this boolean changes, record the time of change in another
+            column.
+          </p>
+        </div>
+      {/if}
     </div>
-    {#if selectedColumn.add_timestamp}
-      <div class="mb-4">
-        <label class="block font-medium text-sm uppercase font-[Departure]"
-          >Timestamp Field Name</label
-        >
-        <input
-          type="text"
-          name="timestamp_field_name"
-          bind:value={selectedColumn.timestamp_field_name}
-          on:input={handleInputChange}
-          class="input input-bordered w-full"
-        />
-      </div>
-    {/if}
   {/if}
 </div>

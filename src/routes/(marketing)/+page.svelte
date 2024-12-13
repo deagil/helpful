@@ -242,60 +242,120 @@
         class="text-4xl md:text-6xl font-bold px-2"
         style="line-height: 1.2;"
       >
-        The
+        A
         <span
           class="underline decoration-secondary decoration-4 md:decoration-[6px]"
-          >open source</span
-        >,
+          >system builder
+        </span>
+        made for
         <span
           class="underline decoration-secondary decoration-4 md:decoration-[6px]"
-          >fast</span
-        >, and
-        <span
-          class="underline decoration-secondary decoration-4 md:decoration-[6px]"
-          >free to host</span
         >
-        <span> SaaS template</span>
+          everyone.
+        </span>
+
+        <p>
+          Bring your own tools and own <span
+            class="underline decoration-secondary decoration-4 md:decoration-[6px]"
+          >
+            your data.
+          </span>
+        </p>
       </div>
       <div class="mt-6 md:mt-10 text-sm md:text-lg">
-        Built with <a
-          href="https://kit.svelte.dev"
-          class="link font-bold"
-          target="_blank">SvelteKit</a
-        >,
-        <a href="https://supabase.com" class="link font-bold" target="_blank"
-          >Supabase</a
-        >,
-        <a href="https://stripe.com" class="link font-bold" target="_blank"
-          >Stripe</a
-        >,
-        <a href="https://tailwindcss.com" class="link font-bold" target="_blank"
-          >Tailwind</a
-        >,
-        <a href="https://daisyui.com" class="link font-bold" target="_blank"
-          >DaisyUI</a
-        >, and
-        <a
-          href="https://www.postgresql.org"
-          class="link font-bold"
-          target="_blank">Postgres</a
-        >
-      </div>
-      <div class="mt-6 md:mt-2">
-        <a href="https://github.com/CriticalMoments/CMSaasStarter">
-          <button class="btn btn-primary btn-sm px-6">★ us on Github</button>
-        </a>
-        <a
-          href="https://github.com/CriticalMoments/CMSaasStarter/tree/main#saas-starter"
-        >
-          <button class="btn btn-outline btn-primary btn-sm px-6 mt-3 mx-2"
-            >Read the Docs</button
-          >
-        </a>
+        Opinionated system management.
       </div>
     </div>
   </div>
 </div>
+
+<div class="hero min-h-[90vh] mt-12">
+  <div class="hero-content text-center pb-16 pt-4 px-4">
+    <div class="max-w-lg">
+      <div
+        class="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent mt-4 pb-2"
+      >
+        Build it all in one place
+      </div>
+      <div class="mt-4 text-xl font-bold">
+        Manage Supabase, build
+        <span
+          class="underline decoration-secondary decoration-[3px] md:decoration-[4px]"
+        >
+          workflows,
+        </span>
+        query across your entire system in
+        <span
+          class="underline decoration-secondary decoration-[3px] md:decoration-[4px]"
+        >
+          natural language.
+        </span>
+      </div>
+      <div
+        class="flex flex-col lg:flex-row mt-6 gap-6 place-content-center content-center"
+      >
+        <div class="hidden md:block">
+          <a href="https://criticalmoments.io" target="_blank" class="link">
+            <div class="mockup-browser border">
+              <div class="mockup-browser-toolbar">
+                <div class="input" style="background:#eee;">
+                  https://veryhelpful.com
+                </div>
+              </div>
+              <div class="flex justify-center">
+                <img
+                  alt="Screenshot of criticalmoments.io homepage"
+                  class="aspect-[1485/793]"
+                  src="/images/vh_settings.png"
+                />
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="md:hidden">
+          <a href="https://criticalmoments.io" target="_blank" class="link">
+            <div class="card shadow-xl border overflow-hidden">
+              <img
+                alt="Screenshot of criticalmoments.io homepage"
+                class="aspect-[2044/1242]"
+                src="/images/example-home.png"
+              />
+            </div></a
+          >
+        </div>
+        <div class="min-w-[270px] lg:min-w-[420px] flex mt-6 lg:mt-0 text-left">
+          <div class="my-auto">
+            <div class="px-4 text-lg md:text-xl">
+              <a href="https://criticalmoments.io" class="" target="_blank"
+                >VH allows you to harness <span
+                  class="font-bold whitespace-nowrap">Critical Moments</span
+                >: a SDK to to help mobile apps
+                <span class="underline decoration-secondary decoration-[3px]"
+                  >increase conversion rates and app-ratings.</span
+                ></a
+              >
+            </div>
+            <div class="px-4 mt-6 text-lg md:text-xl">
+              <span class="font-bold" target="_blank">Your data is yours:</span>
+              all of your VH config and data lives in
+              <span class="underline decoration-secondary decoration-[3px]"
+                >your database</span
+              >.
+            </div>
+            <div class="mt-4 text-large text-center">
+              <a href="https://criticalmoments.io" target="_blank">
+                <button class="btn btn-primary btn-wide mt-3"
+                  >See it in Action</button
+                >
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="min-h-[60vh]">
   <div class="pt-20 pb-8 px-7">
     <div class="max-w-lg mx-auto text-center">
@@ -354,78 +414,6 @@
           </div>
         </div>
       {/each}
-    </div>
-  </div>
-</div>
-<div class="hero min-h-[60vh] mt-12">
-  <div class="hero-content text-center pb-16 pt-4 px-4">
-    <div class="max-w-lg">
-      <div
-        class="text-3xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent mt-4 pb-2"
-      >
-        See it in Action
-      </div>
-      <div
-        class="flex flex-col lg:flex-row mt-6 gap-6 place-content-center content-center"
-      >
-        <div class="hidden md:block">
-          <a href="https://criticalmoments.io" target="_blank" class="link">
-            <div class="mockup-browser border">
-              <div class="mockup-browser-toolbar">
-                <div class="input" style="background:#eee;">
-                  https://criticalmoments.io
-                </div>
-              </div>
-              <div class="flex justify-center">
-                <img
-                  alt="Screenshot of criticalmoments.io homepage"
-                  class="aspect-[2044/1242]"
-                  src="/images/example-home.png"
-                />
-              </div>
-            </div>
-          </a>
-        </div>
-        <div class="md:hidden">
-          <a href="https://criticalmoments.io" target="_blank" class="link">
-            <div class="card shadow-xl border overflow-hidden">
-              <img
-                alt="Screenshot of criticalmoments.io homepage"
-                class="aspect-[2044/1242]"
-                src="/images/example-home.png"
-              />
-            </div></a
-          >
-        </div>
-        <div class="min-w-[270px] lg:min-w-[420px] flex mt-6 lg:mt-0">
-          <div class="my-auto">
-            <div class="px-4 text-lg md:text-xl">
-              <a href="https://criticalmoments.io" class="" target="_blank"
-                >SaaS Starter was created by <span
-                  class="font-bold whitespace-nowrap">Critical Moments</span
-                >: a SDK to to help mobile apps
-                <span class="underline decoration-secondary decoration-[3px]"
-                  >increase conversion rates and app-ratings.</span
-                ></a
-              >
-            </div>
-            <div class="px-4 mt-6 text-lg md:text-xl">
-              Our <a
-                href="https://criticalmoments.io"
-                class="link font-bold"
-                target="_blank">webpage</a
-              > is the best example of SaaS Starter with style and real content.
-            </div>
-            <div class="mt-4 text-large">
-              <a href="https://criticalmoments.io" target="_blank">
-                <button class="btn btn-primary btn-wide mt-3"
-                  >See it in Action</button
-                >
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

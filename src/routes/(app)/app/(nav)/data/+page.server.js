@@ -1,12 +1,11 @@
-// src/routes/app/data/[table]/edit/+page.server.js
+// src/routes/app/data/+page.server.js
 import { error } from '@sveltejs/kit';
 import pkg from 'pg';
-import { decrypt } from '$lib/crypto';
+import { decrypt } from '$lib/server/crypto';
 
 const { Client } = pkg;
 
-export async function load({ params, locals }) {
-  const { table } = params;
+export async function load({ locals }) {
   const { user, supabaseServiceRole } = locals;
 
   if (!user) {
@@ -33,7 +32,7 @@ export async function load({ params, locals }) {
     throw error(500, 'Database connection string not found');
   }
 
-  // Connect to the user's database and fetch columns
+  // Connect to the user's database and fetch tables
   let client;
   try {
     let ssl;
@@ -50,46 +49,41 @@ export async function load({ params, locals }) {
 
     await client.connect();
 
-    // Fetch columns and their metadata
-    const res = await client.query(
-      `
+    // Fetch table details
+    const res = await client.query(`
       SELECT
-        a.attnum AS ordinal_position,
-        a.attname AS column_name,
-        pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
-        col_description(a.attrelid, a.attnum) AS description,
-        a.attnotnull AS not_null,
-        pg_get_expr(ad.adbin, ad.adrelid) AS default_value
+        c.relname AS table_name,
+        obj_description(c.oid) AS description,
+        c.reltuples AS row_estimate,
+        COUNT(a.attname) AS column_count
       FROM
-        pg_attribute a
-        LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
+        pg_class c
+        LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+        LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
       WHERE
-        a.attrelid = $1::regclass
-        AND a.attnum > 0
-        AND NOT a.attisdropped
+        c.relkind = 'r'
+        AND n.nspname = 'public'
+      GROUP BY
+        c.relname, c.oid, c.reltuples
       ORDER BY
-        a.attnum;
-      `,
-      [table]
-    );
+        c.relname;
+    `);
 
-    const columns = res.rows.map((row) => ({
-      ordinal_position: parseInt(row.ordinal_position, 10),
-      column_name: row.column_name,
-      data_type: row.data_type,
+    const tables = res.rows.map((row) => ({
+      table_name: row.table_name,
       description: row.description || '',
-      not_null: row.not_null,
-      default_value: row.default_value,
+      row_estimate: Math.max(parseInt(row.row_estimate, 10),0),
+      column_count: Math.max(parseInt(row.column_count, 10),0)
     }));
 
     await client.end();
 
-    return { table, columns };
+    return { tables };
   } catch (err) {
-    console.error('Error fetching columns:', err);
+    console.error('Error fetching tables:', err);
     if (client) {
       await client.end();
     }
-    throw error(500, 'Failed to fetch columns for the table');
+    throw error(500, 'Failed to fetch tables from the database');
   }
 }
