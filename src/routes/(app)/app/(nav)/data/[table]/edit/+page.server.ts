@@ -45,23 +45,27 @@ export async function load({ params, locals }) {
     // Fetch columns
     const columnRes = await client.query(
       `
-      SELECT
-        a.attnum AS ordinal_position,
-        a.attname AS column_name,
-        pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
-        col_description(a.attrelid, a.attnum) AS description,
-        a.attnotnull AS not_null,
-        pg_get_expr(ad.adbin, ad.adrelid) AS default_value
-      FROM
-        pg_attribute a
-        LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
-      WHERE
-        a.attrelid = $1::regclass
-        AND a.attnum > 0
-        AND NOT a.attisdropped
-      ORDER BY
-        a.attnum;
-      `,
+    SELECT
+      a.attnum AS ordinal_position,
+      a.attname AS column_name,
+      CASE
+        WHEN pg_catalog.format_type(a.atttypid, a.atttypmod) = 'timestamp with time zone' THEN 'timestamptz'
+        WHEN pg_catalog.format_type(a.atttypid, a.atttypmod) = 'timestamp without time zone' THEN 'timestamp'
+        ELSE pg_catalog.format_type(a.atttypid, a.atttypmod)
+      END AS data_type,
+      col_description(a.attrelid, a.attnum) AS description,
+      a.attnotnull AS not_null,
+      pg_get_expr(ad.adbin, ad.adrelid) AS default_value
+    FROM  
+      pg_attribute a
+      LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
+    WHERE
+      a.attrelid = $1::regclass
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+    ORDER BY
+      a.attnum;
+        `,
       [table]
     );
 

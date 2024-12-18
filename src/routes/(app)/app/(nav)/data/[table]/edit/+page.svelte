@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte"
-  import { writable } from "svelte/store"
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte"
   import { enhance } from "$app/forms"
+  import { writable } from "svelte/store"
 
   export let data
   let { table, columns, user_facing_name, table_description, settings } = data
@@ -11,698 +10,518 @@
     return "_" + Math.random().toString(36).substr(2, 9)
   }
 
-  columns = columns.map((col, i) => ({
-    ...col,
-    id: generateUniqueId(),
-    index: i,
-    is_new: false,
-  }))
+  // Initial state for comparison
+  let originalColumnList = []
+
+  // Store for column data
+  let columnList = writable(
+    columns.map((col, i) => ({
+      ...col,
+      id: generateUniqueId(),
+      index: i,
+      is_new: false,
+    })),
+  )
+
+  console.log(columns)
+
+  // Save the original state
+  originalColumnList = JSON.parse(
+    JSON.stringify(columnList), // Deep copy of the initial state
+  )
+
+  // Check for changes
+  function hasChanges() {
+    const currentColumns = columnList
+    return JSON.stringify(originalColumnList) !== JSON.stringify(currentColumns)
+  }
 
   let selectedColumn = null
   let activeMainTab: "fields" | "tableSettings" | "integrations" = "fields"
-  let showAddFieldModal = false
-  let templateSearch = ""
+  let showAddFieldModal = false // Toggle for Add Field modal
+  let templateSearch = "" // Search filter for field templates
 
-  const columnList = writable(columns)
-  let currentColumns = []
-  const unsubCols = columnList.subscribe((cols) => {
-    currentColumns = cols
-  })
-  onDestroy(unsubCols)
-
-  const templateFields = [
-    { type: "text", label: "Text" },
-    { type: "integer", label: "Number" },
-    { type: "date", label: "Date" },
-    { type: "timestamp", label: "Date & Time" },
-    { type: "uuid", label: "UUID" },
-    { type: "boolean", label: "Boolean" },
-    { type: "foreign_key", label: "Relationship" },
-  ]
-
-  const typeMetadata = {
+  // Field templates and metadata
+  // Expanded Field Types with Emojis, Colors, and Descriptions
+  const fieldTypes = {
+    // Textual Types
     text: {
       icon: "📝",
-      color: "bg-blue-100",
+      color: "bg-pink-200",
       label: "Text",
-      description: "For arbitrary strings, such as names or descriptions.",
+      description: "For strings like names, descriptions, or titles.",
     },
+    // Numeric Types
     integer: {
       icon: "🔢",
-      color: "bg-green-100",
-      label: "Integer",
-      description: "For numeric values without decimals, like counts or IDs.",
-    },
-    date: {
-      icon: "📅",
-      color: "bg-yellow-100",
-      label: "Date",
-      description: "For storing calendar dates without time of day.",
-    },
-    timestamp: {
-      icon: "⏰",
-      color: "bg-purple-100",
-      label: "Timestamp",
+      color: "bg-blue-100",
+      label: "Number",
       description:
-        "For storing specific moments in time, often with computed defaults like NOW().",
+        "Whole numbers without decimals, like counts or IDs. (10 digits)",
+      default: [{ label: "Zero", value: 0 }],
     },
-    uuid: {
-      icon: "🔑",
-      color: "bg-indigo-100",
-      label: "UUID",
-      description:
-        "Unique identifiers, often used as primary keys for distributed systems.",
-    },
+    // Boolean
     boolean: {
       icon: "☑️",
-      color: "bg-pink-100",
+      color: "bg-gray-200",
       label: "Boolean",
       description: "True/False values, useful for toggles or flags.",
+      default: [
+        { label: "Checked", value: true },
+        { label: "Not Checked", value: false },
+      ],
+    },
+    // Date and Time Types
+    timestamptz: {
+      icon: "🌍",
+      color: "bg-red-100",
+      label: "Datetime",
+      description: "Timestamps including date, time and timezone information.",
+      default: [{ label: "Current Timestamp", value: "now()" }],
     },
     foreign_key: {
       icon: "🔗",
       color: "bg-gray-100",
-      label: "Foreign Key",
-      description:
-        "References another table’s record, linking data sets together.",
+      label: "Relationship",
+      description: "References another table’s record.",
     },
+    uuid: {
+      icon: "🔑",
+      color: "bg-orange-100",
+      label: "UUID",
+      description: "Unique identifiers, often used as primary keys.",
+      default: [{ label: "Auto-generate UUID", value: "uuid_generate_v4()" }],
+    },
+    jsonb: {
+      icon: "📦",
+      color: "bg-orange-200",
+      label: "JSONB",
+      description: "Binary JSON format for efficient queries.",
+    },
+
+    date: {
+      icon: "📅",
+      color: "bg-red-200",
+      label: "Date Only",
+      description: "For calendar dates without time.",
+      default: [{ label: "Today", value: "CURRENT_DATE" }],
+    },
+    time: {
+      icon: "⏰",
+      color: "bg-red-200",
+      label: "Time Only",
+      description: "Time of day without date.",
+    },
+    interval: {
+      icon: "📏",
+      color: "bg-red-300",
+      label: "Interval",
+      description: "A time interval, like days or hours.",
+    },
+    smallint: {
+      icon: "🤏",
+      color: "bg-blue-200",
+      label: "Small Number",
+      description: "Smaller integers with limited range, +/- 32000.",
+    },
+    bigint: {
+      icon: "🧠",
+      color: "bg-blue-300",
+      label: "Big Number",
+      description: "Larger integers for massive numbers. (18 digits)",
+    },
+    float: {
+      icon: "🛟",
+      color: "bg-blue-400",
+      label: "Float",
+      description:
+        "Decimal (floating-point) numbers for approximate values. 6 digits",
+    },
+    double: {
+      icon: "🛟",
+      color: "bg-blue-500",
+      label: "Double",
+      description:
+        "High-precision Decimal (floating-point) numbers. 15 digits.",
+    },
+
+    // json: {
+    //   icon: "📦",
+    //   color: "bg-yellow-100",
+    //   label: "JSON",
+    //   description: "Structured data stored as JSON objects.",
+    // },
+
+    // Relationship Types
+
+    // // Binary and Blob Types
+    // bytea: {
+    //   icon: "🗂️",
+    //   color: "bg-gray-100",
+    //   label: "Bytea",
+    //   description: "Binary data, often used for files or images.",
+    // },
+
+    // // Spatial and Geometric Types
+    // point: {
+    //   icon: "📍",
+    //   color: "bg-teal-100",
+    //   label: "Point",
+    //   description: "A geometric point (x, y).",
+    // },
+    // line: {
+    //   icon: "📏",
+    //   color: "bg-teal-200",
+    //   label: "Line",
+    //   description: "Infinite line in a geometric space.",
+    // },
+    // polygon: {
+    //   icon: "🔺",
+    //   color: "bg-teal-300",
+    //   label: "Polygon",
+    //   description: "A polygon shape, used for geographic data.",
+    // },
+    // circle: {
+    //   icon: "⭕",
+    //   color: "bg-teal-400",
+    //   label: "Circle",
+    //   description: "Circular shapes with a center and radius.",
+    // },
+
+    // // Networking Types
+    // inet: {
+    //   icon: "🌐",
+    //   color: "bg-purple-100",
+    //   label: "Inet",
+    //   description: "IP addresses (IPv4 or IPv6).",
+    // },
+    // cidr: {
+    //   icon: "🌐",
+    //   color: "bg-purple-200",
+    //   label: "CIDR",
+    //   description: "Network blocks (IPv4 or IPv6).",
+    // },
+    // macaddr: {
+    //   icon: "🖧",
+    //   color: "bg-purple-300",
+    //   label: "MAC Address",
+    //   description: "Media Access Control (MAC) address.",
+    // },
+
+    // Array Types
+    // array: {
+    //   icon: "📚",
+    //   color: "bg-orange-100",
+    //   label: "Array",
+    //   description: "Collection of items of the same type.",
+    // },
   }
 
-  let tables = []
-  let foreignColumns = writable([])
-  let foreignCols = []
-  const foreignUnsub = foreignColumns.subscribe((c) => (foreignCols = c))
-  onDestroy(foreignUnsub)
-
-  onMount(async () => {
-    await fetchTables()
-  })
-
-  async function fetchTables() {
-    try {
-      const response = await fetch("/api/tables")
-      const data = await response.json()
-      if (data.tables) {
-        tables = data.tables
-      } else {
-        console.error("Error fetching tables:", data.error)
-      }
-    } catch (error) {
-      console.error("Error fetching tables:", error)
-    }
-  }
-
-  async function fetchColumnsForForeignKey(tableName: string) {
-    if (!tableName) return
-    try {
-      const response = await fetch("/api/columns/" + tableName)
-      const data = await response.json()
-      if (data.columns) {
-        foreignColumns.set(data.columns)
-      } else {
-        console.error("Error fetching columns:", data.error)
-      }
-    } catch (error) {
-      console.error("Error fetching columns:", error)
-    }
-  }
-
+  // Handles selecting a column
   function selectColumn(column) {
     selectedColumn = column
-    if (
-      selectedColumn.data_type === "foreign_key" &&
-      selectedColumn.foreign_table
-    ) {
-      fetchColumnsForForeignKey(selectedColumn.foreign_table)
-    }
   }
 
-  async function saveChanges() {
-    const form = document.getElementById("configForm") as HTMLFormElement
-    form.requestSubmit()
-  }
-
+  // Handles adding a new column
   function addFieldFromTemplate(field) {
     const newColumn = {
       id: generateUniqueId(),
-      ordinal_position: 999,
       column_name: "",
+      user_facing_label: field.label,
       data_type: field.type,
       description: "",
       not_null: false,
       default_value: null,
-      user_facing_label: field.label,
-      help_text: "",
-      some_technical_option: "default_value",
       is_new: true,
       index: Date.now(),
     }
     columnList.update((cols) => [...cols, newColumn])
-    selectedColumn = newColumn
-    showAddFieldModal = false
+    selectedColumn = newColumn // Automatically select the newly added column
+    showAddFieldModal = false // Close the modal
   }
 
-  function moveColumnUp(col) {
-    columnList.update((cols) => {
-      const idx = cols.findIndex((c) => c.id === col.id)
-      if (!col.is_new) return cols
-      const newIndices = cols
-        .map((c, i) => (c.is_new ? i : -1))
-        .filter((i) => i !== -1)
-      if (idx === newIndices[0]) return cols // topmost new field
-      const temp = cols[idx]
-      cols[idx] = cols[idx - 1]
-      cols[idx - 1] = temp
-      return cols
-    })
-  }
-
-  function moveColumnDown(col) {
-    columnList.update((cols) => {
-      const idx = cols.findIndex((c) => c.id === col.id)
-      if (!col.is_new) return cols
-      const newIndices = cols
-        .map((c, i) => (c.is_new ? i : -1))
-        .filter((i) => i !== -1)
-      if (idx === newIndices[newIndices.length - 1]) return cols // bottommost new field
-      const temp = cols[idx]
-      cols[idx] = cols[idx + 1]
-      cols[idx + 1] = temp
-      return cols
-    })
-  }
-
-  function handleInputChange(event) {
-    if (!selectedColumn) return
-    const { name, value, type, checked } = event.target
-    selectedColumn[name] = type === "checkbox" ? checked : value
-
-    if (name === "data_type") {
-      if (value !== "foreign_key") {
-        delete selectedColumn.foreign_table
-        delete selectedColumn.foreign_column
-      }
-      delete selectedColumn.default_value_option
-      delete selectedColumn.default_value
-      delete selectedColumn.computed_value
-
-      if (value === "foreign_key" && selectedColumn.foreign_table) {
-        fetchColumnsForForeignKey(selectedColumn.foreign_table)
-      }
-    }
-
-    // Update $columnList so changes reflect immediately
-    columnList.update((cols) => {
-      const idx = cols.findIndex((c) => c.id === selectedColumn.id)
-      if (idx !== -1) {
-        cols[idx] = {
-          ...cols[idx],
-          [name]: type === "checkbox" ? checked : value,
+  // Save changes
+  function saveChanges() {
+    const updatedColumns = []
+    columnList.subscribe((cols) => {
+      cols.forEach((col) => {
+        if (
+          col.is_new ||
+          JSON.stringify(col) !==
+            JSON.stringify(originalColumnList.find((c) => c.id === col.id))
+        ) {
+          updatedColumns.push(col)
         }
-      }
-      return cols
+      })
     })
-  }
 
-  function handleDefaultValueChange(event) {
-    if (!selectedColumn) return
-    const { name, value } = event.target
-    selectedColumn[name] = value
-    columnList.update((cols) => {
-      const idx = cols.findIndex((c) => c.id === selectedColumn.id)
-      if (idx !== -1) {
-        cols[idx] = { ...cols[idx], [name]: value }
-      }
-      return cols
+    fetch(`/api/tables/${table}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ updatedColumns }),
     })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          console.log("Save successful:", data)
+          // Update the original state to match the saved state
+          originalColumnList = JSON.parse(JSON.stringify(get(columnList)))
+        }
+      })
+      .catch((error) => {
+        console.error("Error saving changes:", error)
+      })
   }
 
-  function handleQoLChange(event) {
-    if (!selectedColumn) return
-    const { name, checked } = event.target
-    selectedColumn[name] = checked
-    columnList.update((cols) => {
-      const idx = cols.findIndex((c) => c.id === selectedColumn.id)
-      if (idx !== -1) {
-        cols[idx] = { ...cols[idx], [name]: checked }
-      }
-      return cols
-    })
-  }
-
-  function canMoveUp(col) {
-    if (!col.is_new) return false
-    const idx = currentColumns.findIndex((c) => c.id === col.id)
-    const newIndices = currentColumns
-      .map((c, i) => (c.is_new ? i : -1))
-      .filter((i) => i !== -1)
-    return idx !== newIndices[0] // can move up if not topmost new field
-  }
-
-  function canMoveDown(col) {
-    if (!col.is_new) return false
-    const idx = currentColumns.findIndex((c) => c.id === col.id)
-    const newIndices = currentColumns
-      .map((c, i) => (c.is_new ? i : -1))
-      .filter((i) => i !== -1)
-    return idx !== newIndices[newIndices.length - 1] // can move down if not bottommost new field
-  }
-
-  function filteredTemplateFields() {
-    const s = templateSearch.toLowerCase()
-    return templateFields.filter(
-      (f) =>
-        !s ||
-        f.label.toLowerCase().includes(s) ||
-        (typeMetadata[f.type].description &&
-          typeMetadata[f.type].description.toLowerCase().includes(s)),
-    )
+  // Dynamically determine emoji based on column datatype
+  function getEmoji(dataType: string): string {
+    return fieldTypes[dataType]?.icon || "❓"
   }
 </script>
 
 <Breadcrumbs />
 
-<form
-  id="configForm"
-  method="POST"
-  action="?/updateConfig"
-  use:enhance
-  on:submitpreventdefault
->
-  <div class="top-bar flex justify-between items-center mb-4">
+<form id="configForm" method="POST" action="?/updateConfig" use:enhance>
+  <div class="flex justify-between items-center mb-4">
     <h1 class="text-2xl font-bold"><code>{table}</code></h1>
     <button
       type="button"
-      class="btn-primary text-sm uppercase font-[Departure]"
+      class="btn-primary text-sm uppercase"
       on:click={saveChanges}
     >
       Save Changes
     </button>
   </div>
 
-  <!-- Main Tabs -->
   <div class="flex space-x-4 mb-4 border-b pb-2">
     <button
       type="button"
+      class={activeMainTab === "fields" ? "border-b-2 border-orange-500" : ""}
       on:click={() => (activeMainTab = "fields")}
-      class="{activeMainTab === 'fields'
-        ? 'border-b-2 border-orange-500 text-orange-500'
-        : ''} uppercase text-sm font-[Departure]"
     >
       Fields
     </button>
     <button
       type="button"
+      class={activeMainTab === "tableSettings"
+        ? "border-b-2 border-pink-500"
+        : ""}
       on:click={() => (activeMainTab = "tableSettings")}
-      class="{activeMainTab === 'tableSettings'
-        ? 'border-b-2 border-pink-500 text-pink-500'
-        : ''} uppercase text-sm font-[Departure]"
     >
       Table Settings
     </button>
     <button
       type="button"
+      class={activeMainTab === "integrations"
+        ? "border-b-2 border-blue-500"
+        : ""}
       on:click={() => (activeMainTab = "integrations")}
-      class="{activeMainTab === 'integrations'
-        ? 'border-b-2 border-blue-500 text-blue-500'
-        : ''} uppercase text-sm font-[Departure]"
     >
       Integrations
     </button>
   </div>
 
   {#if activeMainTab === "fields"}
-    <div
-      class="flex gap-4"
-      style="max-height:calc(100vh - 12rem); overflow:auto;"
-    >
-      <!-- Left Pane: Fields -->
-      <div class="w-1/3 border-r pr-4 pl-1">
-        <div class="flex items-center justify-between mb-2">
+    <div class="flex gap-4">
+      <div class="w-1/3 border-r">
+        <div class="flex justify-between items-center mb-2">
           <span class="font-semibold">Fields</span>
           <button
             type="button"
-            class="text-blue-500 text-sm underline"
-            on:click={() => (showAddFieldModal = true)}>Add Field</button
+            class="btn-secondary text-sm"
+            on:click={() => (showAddFieldModal = true)}
           >
+            Add Field
+          </button>
         </div>
         <ul>
-          {#each currentColumns as col (col.id)}
+          {#each $columnList as col (col.id)}
             <li
-              class="p-2 mb-2 border rounded flex items-center space-x-2 {selectedColumn &&
-              selectedColumn.id === col.id
-                ? 'ring-2 ring-blue-400'
-                : ''}"
-              style="background-color: {typeMetadata[col.data_type]?.color ||
-                '#f8f9fa'};"
+              class="p-2 mb-2 border rounded cursor-pointer flex items-center"
+              class:selected={selectedColumn && selectedColumn.id === col.id
+                ? "bg-blue-100 border-blue-400"
+                : ""}
               on:click={() => selectColumn(col)}
             >
-              <div
-                class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                style="background-color: inherit;"
+              <!-- Icon -->
+              <span class="mr-2">{fieldTypes[col.data_type]?.icon || "❓"}</span
               >
-                <span class="text-2xl"
-                  >{typeMetadata[col.data_type]?.icon || "❓"}</span
-                >
-              </div>
-              <div class="flex-1">
-                {#if col.user_facing_label}
-                  <span class="font-medium">{col.user_facing_label}</span>
-                  {#if col.column_name}
-                    <code class="ml-2 text-gray-500">[{col.column_name}]</code>
-                  {/if}
-                {:else if col.column_name}
-                  <span class="font-medium">{col.column_name}</span>
-                {:else}
-                  <code>Unnamed Field</code>
-                {/if}
-              </div>
-              {#if col.is_new}
-                <button
-                  type="button"
-                  on:click={(e) => {
-                    e.stopPropagation()
-                    moveColumnUp(col)
-                  }}
-                  disabled={!canMoveUp(col)}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  on:click={(e) => {
-                    e.stopPropagation()
-                    moveColumnDown(col)
-                  }}
-                  disabled={!canMoveDown(col)}
-                >
-                  ↓
-                </button>
-              {:else}
-                <span>🔒</span>
-              {/if}
+
+              <!-- Labels -->
+              <strong>{col.user_facing_label || "Unnamed Field"}</strong>
+              <code>{"[" + col.column_name + "]" || "Unnamed Field"}</code>
             </li>
           {/each}
         </ul>
       </div>
 
-      <!-- Right Pane: Selected Column -->
-      <div class="w-2/3 pl-4 pr-1">
+      <div class="w-2/3">
         {#if selectedColumn}
           <div class="mb-4">
-            <label for="column_name" class="block font-medium text-sm uppercase"
-              >Internal Column Name</label
-            >
-            <input
-              id="column_name"
-              type="text"
-              class="input input-bordered w-full"
-              name="column_name"
-              bind:value={selectedColumn.column_name}
-              on:input={handleInputChange}
-            />
-            <p class="text-xs text-gray-500 mt-1">The actual DB column name.</p>
-          </div>
-
-          <div class="mb-4">
-            <label
-              for="user_facing_label"
-              class="block font-medium text-sm uppercase"
-              >User Facing Name</label
+            <label for="user_facing_label" class="block mb-1 font-semibold"
+              >User Facing Label</label
             >
             <input
               id="user_facing_label"
               type="text"
-              class="input input-bordered w-full"
-              name="user_facing_label"
               bind:value={selectedColumn.user_facing_label}
-              on:input={handleInputChange}
+              class="input input-bordered w-full mb-4"
             />
-            <p class="text-xs text-gray-500 mt-1">
-              Friendly label for end-users.
-            </p>
-          </div>
 
-          <div class="mb-4">
-            <label for="description" class="block font-medium text-sm uppercase"
-              >Field Description</label
+            <label for="column_name" class="block mb-1 font-semibold"
+              >Internal Name</label
+            >
+            <code
+              ><input
+                id="column_name"
+                type="text"
+                bind:value={selectedColumn.column_name}
+                class="input input-bordered w-full mb-4"
+              /></code
+            >
+
+            <label for="description" class="block mb-1 font-semibold"
+              >Description</label
             >
             <textarea
               id="description"
-              class="textarea textarea-bordered w-full"
-              name="description"
               bind:value={selectedColumn.description}
-              on:input={handleInputChange}
+              class="textarea textarea-bordered w-full"
             ></textarea>
-            <p class="text-xs text-gray-500 mt-1">
-              What does this field represent?
-            </p>
           </div>
 
+          <!-- Default Value Configuration -->
           <div class="mb-4">
-            <label for="data_type" class="block font-medium text-sm uppercase"
-              >Data Type</label
-            >
+            <label for="default_value_type" class="block mb-1 font-semibold">
+              Default Value
+            </label>
+            <p class="text-sm text-gray-600 mb-2">
+              Determines what happens if no value is provided when a record is
+              added.
+            </p>
+
+            <!-- Dropdown Selector for Default Value Type -->
             <select
-              id="data_type"
-              name="data_type"
-              class="select select-bordered w-full"
-              bind:value={selectedColumn.data_type}
-              on:change={handleInputChange}
+              id="default_value_type"
+              class="select select-bordered w-full mb-2"
+              bind:value={selectedColumn.default_value_type}
             >
-              {#each Object.entries(typeMetadata) as [t, meta]}
-                <option value={t}>{meta.icon} {meta.label}</option>
-              {/each}
+              <option value="blank">Blank by default</option>
+              <option value="preset">Use preset</option>
+              <option value="manual">Set manually</option>
             </select>
-            <p class="text-xs text-gray-500 mt-1">Underlying DB column type.</p>
-          </div>
 
-          <div class="mb-4">
-            <label
-              for="default_value"
-              class="block font-medium text-sm uppercase">Default Value</label
-            >
-            <input
-              id="default_value"
-              type="text"
-              name="default_value"
-              class="input input-bordered w-full"
-              bind:value={selectedColumn.default_value}
-              on:input={handleDefaultValueChange}
-            />
-            <p class="text-xs text-gray-500 mt-1">
-              Value if none provided by user.
-            </p>
+            <!-- Preset Default Dropdown -->
+            {#if selectedColumn.default_value_type === "preset" && fieldTypes[selectedColumn.data_type]?.default}
+              <label for="preset_default" class="block mb-1 font-semibold">
+                Preset Default
+              </label>
+              <select
+                id="preset_default"
+                class="select select-bordered w-full"
+                bind:value={selectedColumn.default_value}
+              >
+                <option value={null} disabled>Select preset...</option>
+                {#each fieldTypes[selectedColumn.data_type].default as option}
+                  <option value={option.value}>{option.label}</option>
+                {/each}
+              </select>
+            {/if}
+
+            <!-- Manual Default Input -->
+            {#if selectedColumn.default_value_type === "manual"}
+              <label for="manual_default" class="block mb-1 font-semibold">
+                Manual Default
+              </label>
+              <input
+                id="manual_default"
+                type="text"
+                class="input input-bordered w-full"
+                placeholder="Enter custom default value..."
+                bind:value={selectedColumn.default_value}
+              />
+            {/if}
           </div>
         {:else}
-          <div class="p-4">
-            <p class="text-gray-600">
-              Select a field to view and edit details.
-            </p>
-          </div>
+          <p>Select a field to edit its details.</p>
         {/if}
       </div>
     </div>
-  {:else if activeMainTab === "tableSettings"}
-    <div class="p-4">
-      <p class="mb-4 text-gray-600">Configure table-level settings here.</p>
-      <!-- Add table settings fields here -->
-    </div>
-  {:else if activeMainTab === "integrations"}
-    <div class="p-4">
-      <p class="mb-4 text-gray-600">Integrations or future features go here.</p>
-    </div>
   {/if}
 
-  <!-- Add Field Modal -->
   {#if showAddFieldModal}
     <div
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50"
     >
-      <div class="bg-white p-4 rounded shadow max-w-lg w-full">
-        <h2 class="text-lg font-bold mb-2">Add a New Field</h2>
-        <input
-          type="text"
-          placeholder="Filter field types..."
-          class="input input-bordered w-full mb-4"
-          bind:value={templateSearch}
-        />
-        <ul class="space-y-2 mb-4">
-          {#each filteredTemplateFields() as field}
-            <li
-              class="p-2 border rounded bg-gray-50 hover:bg-gray-100 focus:outline-none"
-            >
-              <button
-                type="button"
-                class="w-full text-left"
-                on:click={() => addFieldFromTemplate(field)}
+      <div
+        class="bg-white p-6 rounded shadow-lg w-1/2 max-h-screen flex flex-col"
+      >
+        <!-- Header with fixed search input -->
+        <div class="mb-4">
+          <h2 class="text-lg font-bold mb-2">Add a New Field</h2>
+          <input
+            type="text"
+            placeholder="Search field types..."
+            class="input input-bordered w-full"
+            bind:value={templateSearch}
+          />
+        </div>
+
+        <!-- Scrollable list of field types with emojis and colors -->
+        <div class="flex-1 overflow-y-auto">
+          <ul class="space-y-2">
+            {#each Object.entries(fieldTypes).filter(([key, f]) => f.label
+                .toLowerCase()
+                .includes(templateSearch.toLowerCase())) as [key, field]}
+              <li
+                class="p-3 border rounded-lg cursor-pointer flex items-center gap-3 hover:shadow-md transition-all"
+                on:click={() => addFieldFromTemplate({ type: key, ...field })}
+                style="background-color: var(--tw-color);"
               >
-                <div class="flex items-center space-x-2">
-                  <span
-                    class="{typeMetadata[field.type]
-                      .color} px-2 py-1 rounded inline-block"
-                  >
-                    {typeMetadata[field.type].icon}
-                  </span>
-                  <span class="font-medium">{field.label}</span>
+                <!-- Icon -->
+                <span
+                  class={`text-2xl flex items-center justify-center rounded-full h-10 w-10 ${field.color}`}
+                >
+                  {field.icon}
+                </span>
+
+                <!-- Label and Description -->
+                <div class="flex-1">
+                  <strong class="block text-lg">{field.label}</strong>
+                  <p class="text-sm text-gray-600">{field.description}</p>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">
-                  {typeMetadata[field.type].description}
-                </p>
-              </button>
-            </li>
-          {/each}
-        </ul>
-        <button
-          type="button"
-          class="text-sm text-red-500 underline"
-          on:click={() => (showAddFieldModal = false)}
-        >
-          Cancel
-        </button>
+              </li>
+            {/each}
+          </ul>
+        </div>
+
+        <!-- Cancel button -->
+        <div class="mt-4">
+          <button
+            type="button"
+            class="btn-secondary"
+            on:click={() => (showAddFieldModal = false)}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   {/if}
-
-  <!-- Hidden fields for non-selected columns -->
-  <input type="hidden" name="columnCount" value={currentColumns.length} />
-  {#each currentColumns as col (col.id)}
-    <input
-      type="hidden"
-      name={`col_${col.index}_column_name`}
-      value={col.column_name}
-    />
-    {#if !(selectedColumn && selectedColumn.id === col.id)}
-      <input
-        type="hidden"
-        name={`col_${col.index}_user_facing_label`}
-        value={col.user_facing_label}
-      />
-      <input
-        type="hidden"
-        name={`col_${col.index}_help_text`}
-        value={col.help_text}
-      />
-      <input
-        type="hidden"
-        name={`col_${col.index}_some_technical_option`}
-        value={col.some_technical_option}
-      />
-      {#if col.foreign_table}
-        <input
-          type="hidden"
-          name={`col_${col.index}_foreign_table`}
-          value={col.foreign_table}
-        />
-      {/if}
-      {#if col.foreign_column}
-        <input
-          type="hidden"
-          name={`col_${col.index}_foreign_column`}
-          value={col.foreign_column}
-        />
-      {/if}
-      {#if col.data_type}
-        <input
-          type="hidden"
-          name={`col_${col.index}_data_type`}
-          value={col.data_type}
-        />
-      {/if}
-      {#if col.default_value_option}
-        <input
-          type="hidden"
-          name={`col_${col.index}_default_value_option`}
-          value={col.default_value_option}
-        />
-      {/if}
-      {#if col.default_value}
-        <input
-          type="hidden"
-          name={`col_${col.index}_default_value`}
-          value={col.default_value}
-        />
-      {/if}
-      {#if col.computed_value}
-        <input
-          type="hidden"
-          name={`col_${col.index}_computed_value`}
-          value={col.computed_value}
-        />
-      {/if}
-      {#if col.not_null}
-        <input type="hidden" name={`col_${col.index}_not_null`} value="true" />
-      {/if}
-      {#if col.is_unique}
-        <input type="hidden" name={`col_${col.index}_is_unique`} value="true" />
-      {/if}
-      {#if col.min_value}
-        <input
-          type="hidden"
-          name={`col_${col.index}_min_value`}
-          value={col.min_value}
-        />
-      {/if}
-      {#if col.max_value}
-        <input
-          type="hidden"
-          name={`col_${col.index}_max_value`}
-          value={col.max_value}
-        />
-      {/if}
-      {#if col.max_length}
-        <input
-          type="hidden"
-          name={`col_${col.index}_max_length`}
-          value={col.max_length}
-        />
-      {/if}
-      {#if col.add_timestamp}
-        <input
-          type="hidden"
-          name={`col_${col.index}_add_timestamp`}
-          value="true"
-        />
-      {/if}
-      {#if col.timestamp_field_name}
-        <input
-          type="hidden"
-          name={`col_${col.index}_timestamp_field_name`}
-          value={col.timestamp_field_name}
-        />
-      {/if}
-    {/if}
-  {/each}
 </form>
 
 <style>
-  .top-bar {
-    margin-bottom: 1rem;
-  }
-
   .btn-primary {
     background-color: orange;
     color: white;
     padding: 0.5rem 1rem;
-    border: none;
     border-radius: 4px;
-    font-weight: bold;
-    cursor: pointer;
   }
 
-  .btn-primary:hover {
-    background-color: darkorange;
-  }
-
-  details summary {
-    outline: none;
-  }
-
-  details summary:hover {
-    text-decoration: underline;
-  }
-
-  .fixed {
-    position: fixed;
+  .btn-secondary {
+    background-color: gray;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
   }
 </style>
