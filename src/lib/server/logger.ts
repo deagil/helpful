@@ -45,7 +45,7 @@ export async function logError(
   }
 
   // Log to Sentry if configured
-  await logToSentry(logEntry, event);
+  //await logToSentry(logEntry, event);
 }
 
 // Helper function to log to the user's database

@@ -41,8 +41,9 @@
     return service && service.connected === true
   }
 
-  // Update adminSection dynamically based on route
   $: adminSection = page?.route?.id?.split("/").at(-1) || ""
+
+  let submenuOpen = false
 </script>
 
 <div class="drawer lg:drawer-open">
@@ -119,14 +120,69 @@
             </a>
           </li>
         {/if}
-        <li>
-          <a
-            href="/app/workflows"
-            class={adminSection === "workflows" ? "active" : ""}
-            onclick={closeDrawer}
-          >
-            📨 Workflows
-          </a>
+
+        <!-- Workflows with Submenu -->
+        <li class="relative">
+          <div class="flex items-center justify-between">
+            <a
+              href="/app/workflows"
+              class={`${
+                adminSection === "workflows" ? "active" : ""
+              } flex items-center gap-2`}
+              onclick={closeDrawer}
+            >
+              🌊 Flows
+            </a>
+            <button
+              class="btn btn-sm btn-ghost ml-2"
+              aria-label="Toggle submenu"
+              onclick={() => (submenuOpen = !submenuOpen)}
+            >
+              {submenuOpen ? "−" : "+"}
+            </button>
+          </div>
+          {#if submenuOpen}
+            <ul
+              class="absolute left-full top-0 mt-2 dropdown-content menu p-2 shadow-lg bg-base-100 border border-gray-300 rounded-lg z-10 w-52 lg:mt-2 lg:left-auto lg:right-0"
+            >
+              <li>
+                <a
+                  href="/app/workflows/flows"
+                  class="hover:bg-gray-100 flex items-center gap-2"
+                  onclick={closeDrawer}
+                >
+                  ▶️ Workflows
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/app/workflows/functions"
+                  class="hover:bg-gray-100 flex items-center gap-2"
+                  onclick={closeDrawer}
+                >
+                  👨🏽‍💻 Functions
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/app/workflows/events"
+                  class="hover:bg-gray-100 flex items-center gap-2"
+                  onclick={closeDrawer}
+                >
+                  📅 Events
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/app/workflows/actions"
+                  class="hover:bg-gray-100 flex items-center gap-2"
+                  onclick={closeDrawer}
+                >
+                  ⚡ Actions
+                </a>
+              </li>
+            </ul>
+          {/if}
         </li>
         <li>
           <a

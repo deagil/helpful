@@ -1,11 +1,11 @@
 <script lang="ts">
-  import SettingsModule from "../../settings_module.svelte"
+  import SettingsModule from "../settings_module.svelte"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
-  adminSection.set("settings")/../../edit_profile/$types.js
+  adminSection.set("settings")
 
   let { data } = $props()
 
