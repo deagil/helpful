@@ -1,176 +1,27 @@
 import { error, fail } from '@sveltejs/kit';
-import pkg from 'pg';
-import { decrypt } from '$lib/server/crypto';
+import { fetchUserTables, fetchConfigTables } from '$lib/server/supabaseTables.js';
 
-const { Client, Pool } = pkg;
-
-const tableConfigCache = new Map();
-
-export async function load({ params, locals }) {
-  const { table } = params;
-  const { user, supabaseServiceRole } = locals;
-
-  if (!user) throw error(401, 'Unauthorized');
-
-  const { data, error: dbError } = await supabaseServiceRole
-    .from('user_services')
-    .select('config')
-    .eq('user_id', user.id)
-    .eq('app', 'supabase')
-    .single();
-
-  if (dbError || !data) throw error(500, 'Failed to retrieve database configuration');
-
-  const decryptedConfig = JSON.parse(decrypt(data.config));
-  const connectionString = decryptedConfig.connectionString;
-  const ssl = decryptedConfig.useSSL ? { rejectUnauthorized: false } : false;
-
-  let client;
-  try {
-    client = new Client({ connectionString, ssl });
-    await client.connect();
-
-    // Fetch table columns
-    const columnRes = await client.query(`
-      SELECT
-        a.attnum AS ordinal_position,
-        a.attname AS column_name,
-        CASE
-          WHEN pg_catalog.format_type(a.atttypid, a.atttypmod) = 'timestamp with time zone' THEN 'timestamptz'
-          ELSE pg_catalog.format_type(a.atttypid, a.atttypmod)
-        END AS data_type,
-        col_description(a.attrelid, a.attnum) AS description,
-        a.attnotnull AS not_null,
-        pg_get_expr(ad.adbin, ad.adrelid) AS default_value
-      FROM pg_attribute a
-      LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
-      WHERE a.attrelid = $1::regclass AND a.attnum > 0 AND NOT a.attisdropped
-      ORDER BY a.attnum;
-    `, [table]);
-
-    const columns = columnRes.rows.map((row) => ({
-      ordinal_position: parseInt(row.ordinal_position, 10),
-      column_name: row.column_name,
-      data_type: row.data_type,
-      description: row.description || '',
-      not_null: row.not_null,
-      default_value: row.default_value,
-    }));
-
-    // Fetch table configuration
-    const configRes = await client.query(`
-      SELECT user_facing_name, description, settings
-      FROM config.tables
-      WHERE table_name = $1
-    `, [table]);
-
-    const tableConfig = configRes.rows[0] || { settings: {} };
-    const settings = tableConfig.settings || {};
-
-    // Merge column configs with user settings
-    const mergedColumns = columns.map((col) => {
-      const columnSettings = settings.columns?.[col.column_name] || {};
-      return {
-        ...col,
-        user_facing_label: columnSettings.user_facing_label || col.column_name,
-        help_text: columnSettings.help_text || '',
-        tally_field_type: columnSettings.tally_field_type || mapToTallyFieldType(col.data_type),
-        tally_specific_options: columnSettings.tally_specific_options || {},
-      };
-    });
-
-    await client.end();
-    return {
-      table,
-      columns: mergedColumns,
-      user_facing_name: tableConfig.user_facing_name || table,
-      table_description: tableConfig.description || '',
-      settings,
-    };
-  } catch (err) {
-    if (client) await client.end();
-    console.error(err);
-    throw error(500, 'Failed to fetch columns or table configuration');
-  }
+// Helper function to map Postgres data types to default Tally field types.
+function mapToTallyFieldType(dataType) {
+  const mapping = {
+    text: 'INPUT_TEXT',
+    integer: 'INPUT_NUMBER',
+    boolean: 'CHECKBOX',
+    uuid: 'INPUT_TEXT',
+    timestamptz: 'INPUT_DATE',
+    date: 'INPUT_DATE',
+    timestamp: 'INPUT_DATE',
+  };
+  return mapping[dataType] || 'INPUT_TEXT';
 }
 
-export const actions = {
-  updateConfig: async ({ request, locals, params }) => {
-    const { table } = params;
-    const { user, supabaseServiceRole } = locals;
-
-    if (!user) return fail(401, { errorMessage: 'Unauthorized' });
-
-    const formData = await request.formData();
-    const columnCount = parseInt(formData.get('columnCount'), 10);
-
-    const columnsSettings = {};
-    for (let i = 0; i < columnCount; i++) {
-      const prefix = `col_${i}_`;
-      const colName = formData.get(`${prefix}column_name`);
-      columnsSettings[colName] = {
-        user_facing_label: formData.get(`${prefix}user_facing_label`) || colName,
-        help_text: formData.get(`${prefix}help_text`) || '',
-        tally_field_type: formData.get(`${prefix}tally_field_type`),
-        tally_specific_options: JSON.parse(formData.get(`${prefix}tally_specific_options`) || '{}'),
-      };
-    }
-
-    const { data, error: fetchError } = await supabaseServiceRole
-      .from('user_services')
-      .select('config')
-      .eq('user_id', user.id)
-      .eq('app', 'supabase')
-      .single();
-
-    if (fetchError || !data) return fail(500, { errorMessage: 'Failed to fetch user configuration.' });
-
-    const decryptedConfig = JSON.parse(decrypt(data.config));
-    const userDbConnectionString = decryptedConfig.connectionString;
-    const ssl = decryptedConfig.useSSL ? { rejectUnauthorized: false } : false;
-
-    const userPool = new Pool({ connectionString: userDbConnectionString, ssl });
-    const client = await userPool.connect();
-
-    try {
-      // Update Postgres Schema
-      for (const [colName, colSettings] of Object.entries(columnsSettings)) {
-        await client.query(`
-          ALTER TABLE ${table}
-          ALTER COLUMN ${colName}
-          SET DATA TYPE ${colSettings.tally_field_type},
-          SET NOT NULL ${colSettings.not_null ? 'TRUE' : 'FALSE'};
-        `);
-      }
-
-      // Update Config
-      await client.query(`
-        INSERT INTO config.tables (table_name, settings)
-        VALUES ($1, $2)
-        ON CONFLICT (table_name) DO UPDATE SET settings = EXCLUDED.settings;
-      `, [table, JSON.stringify({ columns: columnsSettings })]);
-
-      // Synchronise with Tally
-      const tallyFormPayload = buildTallyFormPayload(columnsSettings);
-      await syncWithTally(table, tallyFormPayload);
-
-      await client.end();
-      return { success: true };
-    } catch (err) {
-      await client.end();
-      console.error(err);
-      return fail(500, { errorMessage: 'Failed to update configuration.' });
-    }
-  },
-};
-
-// Helper function to build Tally payload
+// Helper: Build a Tally form payload from column settings.
 function buildTallyFormPayload(columnsSettings) {
   return {
     status: 'PUBLISHED',
     blocks: Object.entries(columnsSettings).map(([colName, colSettings]) => ({
       uuid: generateUuid(),
-      type: mapToTallyFieldType(colSettings.tally_field_type),
+      type: colSettings.tally_field_type,
       groupUuid: generateUuid(),
       payload: {
         html: colSettings.user_facing_label,
@@ -181,6 +32,7 @@ function buildTallyFormPayload(columnsSettings) {
   };
 }
 
+// Helper: Generate a UUID.
 function generateUuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
@@ -189,14 +41,103 @@ function generateUuid() {
   });
 }
 
-// Helper function to map Postgres data types to Tally field types
-function mapToTallyFieldType(dataType) {
-  const mapping = {
-    text: 'INPUT_TEXT',
-    integer: 'INPUT_NUMBER',
-    boolean: 'CHECKBOX',
-    uuid: 'INPUT_TEXT',
-    timestamptz: 'INPUT_DATE',
+// Stub: Sync with Tally – implement as needed.
+async function syncWithTally(table, payload) {
+  console.log(`Syncing Tally form for table ${table}:`, payload);
+  return Promise.resolve();
+}
+
+export async function load({ params, locals }) {
+  const { table } = params;
+  const { user, supabaseServiceRole } = locals;
+  if (!user) throw error(401, 'Unauthorized');
+
+  // Get live table structure.
+  const liveTables = await fetchUserTables(supabaseServiceRole, user.id);
+  const liveTable = liveTables.find((t) => t.name === table);
+  if (!liveTable) throw error(404, 'Live table not found');
+
+  // Get saved configuration.
+  const configTables = await fetchConfigTables(supabaseServiceRole, user.id);
+  const tableConfig = configTables.find((cfg) => cfg.name === table) || { settings: {} };
+  const settings = tableConfig.settings || {};
+
+  // Merge per‑column settings: use the live columns array and, for each column, apply saved settings if available.
+  const mergedColumns = (liveTable.columns || []).map((col) => {
+    const columnSettings = settings.columns?.[col.column_name] || {};
+    return {
+      ...col,
+      user_facing_label: columnSettings.user_facing_label || col.column_name,
+      help_text: columnSettings.help_text || '',
+      tally_field_type: columnSettings.tally_field_type || mapToTallyFieldType(col.data_type),
+      tally_specific_options: columnSettings.tally_specific_options || {},
+    };
+  });
+
+  return {
+    table,
+    columns: mergedColumns,
+    user_facing_name: tableConfig.user_facing_name || table,
+    table_description: tableConfig.description || '',
+    settings,
   };
-  return mapping[dataType] || 'INPUT_TEXT';
-}  
+}
+
+export const actions = {
+  updateConfig: async ({ request, locals, params }) => {
+    const { table } = params;
+    const { user, supabaseServiceRole } = locals;
+    if (!user) return fail(401, { errorMessage: 'Unauthorized' });
+
+    const formData = await request.formData();
+
+    // Parse the complete columns configuration from the hidden field.
+    const allColumnsJSON = formData.get('all_columns');
+    let allColumns;
+    try {
+      allColumns = JSON.parse(allColumnsJSON);
+    } catch (e) {
+      console.error('Failed to parse all_columns JSON:', e);
+      return fail(400, { errorMessage: 'Invalid columns data.' });
+    }
+
+    // Build columnsSettings from the parsed array.
+    const columnsSettings = {};
+    for (const col of allColumns) {
+      const colName = col.column_name;
+      columnsSettings[colName] = {
+        user_facing_label: col.user_facing_label || colName,
+        help_text: col.help_text || '',
+        tally_field_type: col.tally_field_type,
+        tally_specific_options: col.tally_specific_options || {},
+        include_in_forms: col.include_in_forms
+      };
+    }
+
+    const userFacingName = formData.get('user_facing_name') || table;
+    const tableDescription = formData.get('table_description') || '';
+
+    console.log('Updating configuration for table:', table);
+    console.log('New configuration:', { userFacingName, tableDescription, columnsSettings });
+
+    // Now update the configuration record.
+    // (Uncomment and adjust this section according to your Supabase setup)
+    /*
+    const { error: updateError } = await supabaseServiceRole
+      .from('vh_tables')
+      .upsert({
+        name: table,
+        user_facing_name: userFacingName,
+        description: tableDescription,
+        settings: { columns: columnsSettings }
+      });
+    if (updateError) return fail(500, { errorMessage: 'Failed to update configuration.' });
+    */
+
+    // Optionally, build and sync a Tally form payload.
+    const tallyFormPayload = buildTallyFormPayload(columnsSettings);
+    await syncWithTally(table, tallyFormPayload);
+
+    return { success: true };
+  }
+};

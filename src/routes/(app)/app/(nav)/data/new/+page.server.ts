@@ -159,10 +159,10 @@ export const actions: Actions = {
         // await client.query(`CREATE INDEX ON "${tableName}" (created_at)`);
 
         await client.query(`
-          INSERT INTO config.tables (table_name, user_facing_name, description, settings)
+          INSERT INTO vh_tables (name, label, description, settings)
             VALUES ($1, $2, $3, $4)
-            ON CONFLICT (table_name) DO UPDATE SET
-              user_facing_name = EXCLUDED.user_facing_name,
+            ON CONFLICT (name) DO UPDATE SET
+              label = EXCLUDED.label,
               description = EXCLUDED.description,
               settings = EXCLUDED.settings;
         `, [

@@ -37,11 +37,11 @@ export async function GET({ locals }) {
         available: false,
       },
       {
-        id: 'tally-forms',
+        id: 'tally',
         name: 'Tally Forms',
         subtitle: 'Integrate Tally Forms to manage form submissions.',
         logo: 'tally-icon.svg',
-        available: false,
+        available: true,
       },
       {
         id: "posthog",

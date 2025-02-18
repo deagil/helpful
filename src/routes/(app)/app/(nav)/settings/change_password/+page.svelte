@@ -2,10 +2,10 @@
   import { page } from "$app/stores"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
-  import SettingsModule from "../../../settings_module.svelte"
+  import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
-  adminSection.set("settings")../../change_password/$types.js../(details)/change_password/$types.js
+  adminSection.set("settings")
 
   let { data } = $props()
   let { user, supabase } = data

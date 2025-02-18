@@ -50,7 +50,7 @@
 
   async function fetchExistingConfig() {
     try {
-      const response = await fetch("/api/save-credentials")
+      const response = await fetch("/api/save-credentials?app=supabase")
       if (response.ok) {
         const { config } = await response.json()
         integrationDetails.connectionString = config.connectionString

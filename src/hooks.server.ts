@@ -106,11 +106,12 @@ const errorHandler: Handle = async ({ event, resolve }) => {
     }
     // Check if the error is an HTTP error
     if (err && typeof err === 'object' && 'status' in err && 'body' in err) {
+      await logError('Unhandled server error', { event, error: err });
       // Re-throw HTTP errors
       throw err;
     }
     // For other errors, log and re-throw
-    await logError('Unhandled server error', { event, error: err },);
+    await logError('Unhandled server error', { event, error: err });
     throw err;
   }
 };

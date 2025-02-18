@@ -109,6 +109,17 @@
       </li>
 
       {#if servicesLoaded}
+        {#if isServiceConnected("tally")}
+          <li>
+            <a
+              href="/app/forms"
+              class={adminSection === "forms" ? "active" : ""}
+              onclick={closeDrawer}
+            >
+              📝 Forms
+            </a>
+          </li>
+        {/if}
         {#if isServiceConnected("supabase")}
           <li>
             <a
