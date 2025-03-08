@@ -4,7 +4,7 @@
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
-  adminSection.set("settings")../../../change_email/$types.js../(details)/change_email/$types.js
+  adminSection.set("settings")
 
   let { data } = $props()
 

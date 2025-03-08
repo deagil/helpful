@@ -20,6 +20,7 @@
       if (response.ok) {
         const data = await response.json()
         integrations = data.services
+        console.log("Fetched integrations:", integrations)
       } else {
         console.error("Failed to fetch integrations")
       }

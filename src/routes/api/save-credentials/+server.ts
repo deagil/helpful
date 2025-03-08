@@ -7,8 +7,8 @@ export async function POST({ request, locals }) {
   try {
     const { app, config } = await request.json();
 
-    console.log('Received app:', app);
-    console.log('Received config:', config);
+    //console.log('Received app:', app);
+    //console.log('Received config:', config);
 
     if (!config) {
       throw new Error('Config is undefined.');

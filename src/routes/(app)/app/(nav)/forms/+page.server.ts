@@ -44,8 +44,10 @@ export async function load({ locals }) {
     console.log('Tally forms:', forms);
     if (!response.ok) {
       throw new Error(forms.error || 'Failed to fetch Tally forms');
+    } else {
+      console.log('Tally forms:', forms);
     }
-    return { forms };
+    return { forms: forms.items };
   } catch (err: any) {
     throw error(500, err.message);
   }

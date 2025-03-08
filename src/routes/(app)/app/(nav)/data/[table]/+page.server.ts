@@ -47,27 +47,31 @@ export async function load({ locals, params, url }) {
 
     await client.connect();
 
-    // Fetch records from the specified table
-    const res = await client.query(`
-      SELECT *
-      FROM public.${table}
-      LIMIT $1 OFFSET $2
-    `, [limit, offset]);
-
-    const countRes = await client.query(`
-      SELECT COUNT(*) AS total
-      FROM public.${table}
-    `);
+    // Fetch table records and config in parallel
+    const [recordsRes, countRes, configRes] = await Promise.all([
+      client.query(
+        `SELECT * FROM public.${table} LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      client.query(`SELECT COUNT(*) AS total FROM public.${table}`),
+      client.query(`SELECT * FROM vh_tables WHERE name = $1`, [table])
+    ]);
 
     const totalRecords = parseInt(countRes.rows[0].total, 10);
+    const tableConfig = configRes.rows.length ? configRes.rows[0] : null;
+
+    console.log(`Total records in table ${table}:`, totalRecords);
+    console.log(`Config for table ${table}:`, tableConfig);
+
 
     await client.end();
 
     return {
-      records: res.rows,
+      records: recordsRes.rows,
       totalRecords,
       currentPage: page,
       totalPages: Math.ceil(totalRecords / limit),
+      tableConfig, // Include table configuration
     };
   } catch (err) {
     console.error(`Error fetching records from table ${table}:`, err);

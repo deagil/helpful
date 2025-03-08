@@ -6,8 +6,8 @@ export async function POST({ request, locals }) {
   try {
     const { app, config } = await request.json();
 
-    console.log('Received app:', app);
-    console.log('Received config:', config);
+    //console.log('Received app:', app);
+    //console.log('Received config:', config);
 
     if (!config) {
       throw new Error('Config is undefined.');
@@ -46,7 +46,7 @@ export async function POST({ request, locals }) {
 
 export async function GET({ url, locals }) {
 
-  console.log('testing tally')
+  //console.log('testing tally')
 
   const { user, supabaseServiceRole } = locals;
 
@@ -60,7 +60,7 @@ export async function GET({ url, locals }) {
     return json({ error: 'Missing app parameter' }, { status: 400 });
   }
 
-  console.log('Received app:', app);
+  //console.log('Received app:', app);
 
   // Query the database for the given user's service config for the specified app
   const { data, error } = await supabaseServiceRole
@@ -77,7 +77,7 @@ export async function GET({ url, locals }) {
   // Decrypt the stored configuration
   const decryptedConfig = JSON.parse(decrypt(data.config));
 
-  console.log('Decrypted config:', decryptedConfig);
+  //console.log('Decrypted config:', decryptedConfig);
 
   // Support both { apiKey } or { config: { apiKey } } payload shapes.
   const apiKey = decryptedConfig.apiKey || (decryptedConfig.config && decryptedConfig.config.apiKey);
@@ -85,7 +85,7 @@ export async function GET({ url, locals }) {
     return fail(400, { error: "API key is required." });
   }
 
-  console.log('API key:', apiKey);
+  //console.log('API key:', apiKey);
 
   try {
     const response = await fetch("https://api.tally.so/users/me", {
@@ -96,7 +96,7 @@ export async function GET({ url, locals }) {
     });
 
     const data = await response.json();
-    console.log('Tally response:', data);
+    //console.log('Tally response:', data);
 
     if (!response.ok) {
       return fail(response.status, {

@@ -57,7 +57,7 @@
         alert("API key validation failed: " + result.error)
       }
     } catch (error) {
-      apiKeyStatus = "API key validation failed: " + error.message
+      apiKeyStatus = "Exception: API key validation failed: " + error.message
       console.error("Error testing Tally API key:", error)
       alert("An error occurred while testing the API key.")
     } finally {

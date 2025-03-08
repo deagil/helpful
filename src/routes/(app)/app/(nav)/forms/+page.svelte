@@ -48,7 +48,7 @@
         >Description</th
       >
       <th class="px-4 py-2 text-center text-xs uppercase font-semibold"
-        >Published</th
+        >Status</th
       >
       <th class="px-4 py-2 text-center text-xs uppercase font-semibold"
         >Submissions</th
@@ -66,10 +66,22 @@
       >
         <td class="px-4 py-2">{form.name}</td>
         <td class="px-4 py-2">{form.description || "No description"}</td>
-        {#if form.status === "PUBLISHED"}
-          <td class="px-4 py-2 text-center text-green-500">✅</td>
-        {:else}
-          <td class="px-4 py-2 text-center text-red-500">❌</td>
+
+        {#if form.isClosed}
+          <td
+            class="text-red-500 text-center font-[Departure] uppercase text-sm"
+            >Closed</td
+          >
+        {:else if form.status === "PUBLISHED"}
+          <td
+            class="text-green-500 text-center font-[Departure] uppercase text-sm"
+            >Live</td
+          >
+        {:else if form.status === "DRAFT"}
+          <td
+            class="text-gray-500 text-center font-[Departure] uppercase text-sm"
+            >Draft</td
+          >
         {/if}
         <td class="px-4 py-2 text-center">{form.numberOfSubmissions}</td>
         <td class="px-4 py-2 text-center">

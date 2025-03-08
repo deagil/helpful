@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SettingsModule from "../../../settings_module.svelte"../../change_email_subscription/$types.js
+  import SettingsModule from "../settings_module.svelte"
   let { data } = $props()
   let { profile } = data
   let unsubscribed = profile?.unsubscribed

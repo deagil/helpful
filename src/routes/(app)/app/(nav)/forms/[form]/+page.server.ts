@@ -12,7 +12,7 @@ export async function load({ params, locals, url }) {
     throw error(401, 'Unauthorized');
   }
 
-  // Retrieve the user's Tally configuration from Supabase (app: "tally")
+  // Retrieve the user's Tally configuration (app: "tally")
   const { data: configData, error: configError } = await supabaseServiceRole
     .from('user_services')
     .select('config')
@@ -33,33 +33,43 @@ export async function load({ params, locals, url }) {
   // Get current page from query parameters (default to 1)
   const currentPage = Number(url.searchParams.get('page')) || 1;
 
-  // Build the Tally submissions endpoint URL using the form ID and page number
-  const tallyEndpoint = `https://api.tally.so/forms/${formId}/submissions?page=${currentPage}`;
-
+  // Fetch submissions (which include questions) from Tally
+  const submissionsEndpoint = `https://api.tally.so/forms/${formId}/submissions?page=${currentPage}`;
+  let submissionsData;
   try {
-    const response = await fetch(tallyEndpoint, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      }
+    const response = await fetch(submissionsEndpoint, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
     });
-
-    const tallyData = await response.json();
-
+    submissionsData = await response.json();
     if (!response.ok) {
-      throw new Error(tallyData.error || 'Failed to fetch submissions');
+      throw new Error(submissionsData.error || 'Failed to fetch submissions');
     }
-
-    // Destructure data from the Tally response
-    const { submissions, page, limit, totalNumberOfSubmissionsPerFilter } = tallyData;
-    const totalSubmissions = totalNumberOfSubmissionsPerFilter.all || 0;
-    const totalPages = Math.ceil(totalSubmissions / limit);
-
-    return {
-      submissions,
-      currentPage: page,
-      totalPages
-    };
   } catch (err: any) {
     throw error(500, err.message);
   }
+  const { questions, submissions, limit, totalNumberOfSubmissionsPerFilter } = submissionsData;
+  const totalSubmissions = totalNumberOfSubmissionsPerFilter.all || 0;
+  const totalPages = Math.ceil(totalSubmissions / limit);
+
+  // Fetch rich form details for the selected form
+  let formDetail;
+  try {
+    const formDetailRes = await fetch(`https://api.tally.so/forms/${formId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    formDetail = await formDetailRes.json();
+    if (!formDetailRes.ok) {
+      throw new Error(formDetail.error || 'Failed to fetch form details');
+    }
+  } catch (err: any) {
+    throw error(500, err.message);
+  }
+
+  return {
+    formDetail,
+    questions,
+    submissions,
+    currentPage,
+    totalPages
+  };
 }

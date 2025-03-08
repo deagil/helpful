@@ -55,7 +55,7 @@
   title="Billing"
   editable={false}
   fields={[{ id: "email", initialValue: user?.email || "" }]}
-  editButtonTitle="Change Email"
+  editButtonTitle="Manage Billing"
   editLink="/app/settings/billing"
 />
 

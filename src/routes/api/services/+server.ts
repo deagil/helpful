@@ -65,6 +65,8 @@ export async function GET({ locals }) {
       .select('app')
       .eq('user_id', user.id);
 
+    console.log(`Connected services for user ${user.id}: `, connectedServicesData);
+
     if (error) {
       console.error('Error fetching connected services:', error);
       return json({ error: 'Failed to fetch connected services' }, { status: 500 });
