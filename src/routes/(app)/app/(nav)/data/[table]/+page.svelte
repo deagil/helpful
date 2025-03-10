@@ -12,11 +12,6 @@
     goto(`?page=${page}`)
   }
 
-  // Navigate to the edit page for the table
-  function goToEdit() {
-    goto(`/${tableConfig.name}/edit`)
-  }
-
   // Check if a string is a valid URL
   function isValidUrl(str: string): boolean {
     try {
@@ -121,7 +116,13 @@
     </thead>
     <tbody>
       {#each records as record}
-        <tr class="cursor-pointer hover:bg-red-100">
+        <tr
+          on:click={() => {
+            console.log("Row clicked!")
+            goto(`/app/data/${tableConfig.name}/${record.id}`)
+          }}
+          class="cursor-pointer hover:bg-gray-50"
+        >
           {#each Object.entries(record) as [column, value]}
             <td
               class="px-4 py-2 border-b {getCellClass(column)}"

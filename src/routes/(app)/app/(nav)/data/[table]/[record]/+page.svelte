@@ -5,10 +5,11 @@
   let { data } = $props()
   let { table, recordId, rowData, recentChanges, tableConfig } = data
 
-  // We'll store a local copy of each field's value
-  let formValues = $state({})
+  // Track which changes are expanded
+  let expandedChanges = $state({})
 
-  // Initialize formValues with the existing rowData
+  // Store record fields in formValues
+  let formValues = $state({})
   $effect(() => {
     for (const [col, val] of Object.entries(rowData)) {
       formValues[col] = val
@@ -74,23 +75,33 @@
     alert("Save logic not yet implemented!")
   }
 
-  /**
-   * Build a human-readable summary of changes, e.g.:
-   *  - "Name changed from Bob to Alice"
-   *  - "3 properties changed including Name, Age, Height"
-   */
+  // Returns a short summary: either "No changes.", "X changed.", or "N fields changed."
+  function shortSummary(beforeJson: any, afterJson: any) {
+    let before = beforeJson,
+      after = afterJson
+    // If they're stored as JSON strings, parse them:
+    // try { before = JSON.parse(beforeJson); after = JSON.parse(afterJson); } catch {}
+    const changedKeys = []
+    const keys = new Set([
+      ...Object.keys(before || {}),
+      ...Object.keys(after || {}),
+    ])
+    for (const key of keys) {
+      if (before?.[key] !== after?.[key]) {
+        changedKeys.push(key)
+      }
+    }
+    if (changedKeys.length === 0) return "No changes."
+    if (changedKeys.length === 1)
+      return `${getFriendlyLabel(changedKeys[0])} changed.`
+    return `${changedKeys.length} fields changed.`
+  }
+
+  // Full detail for the expanded view
   function renderChangeSummary(beforeJson: string, afterJson: string) {
     let before = beforeJson,
       after = afterJson
-    try {
-      // If these were JSON strings, you'd parse them:
-      // before = JSON.parse(beforeJson);
-      // after = JSON.parse(afterJson);
-    } catch (e) {
-      return `<p>Changes: (invalid JSON or no changes)</p>`
-    }
-
-    // Collect the changed fields
+    // try { before = JSON.parse(beforeJson); after = JSON.parse(afterJson); } catch {}
     const changedFields: any[] = []
     const keys = new Set([
       ...Object.keys(before || {}),
@@ -100,60 +111,33 @@
     for (const key of keys) {
       const oldVal = before?.[key]
       const newVal = after?.[key]
-
-      if (oldVal === undefined && newVal !== undefined) {
-        // field was added
-        changedFields.push({
-          key,
-          type: "added",
-          oldVal: null,
-          newVal,
-        })
-      } else if (oldVal !== undefined && newVal === undefined) {
-        // field was removed
-        changedFields.push({
-          key,
-          type: "removed",
-          oldVal,
-          newVal: null,
-        })
-      } else if (oldVal !== newVal) {
-        // field was updated
-        changedFields.push({
-          key,
-          type: "updated",
-          oldVal,
-          newVal,
-        })
+      if (oldVal !== newVal) {
+        changedFields.push({ key, oldVal, newVal })
       }
     }
-
     if (changedFields.length === 0) {
       return `<p>No changes.</p>`
     }
 
-    if (changedFields.length === 1) {
-      const cf = changedFields[0]
-      const label = getFriendlyLabel(cf.key)
-      if (cf.type === "added") {
-        return `<p>${label} was added (value: <strong>${cf.newVal}</strong>)</p>`
-      } else if (cf.type === "removed") {
-        return `<p>${label} was removed (previous value: ${cf.oldVal})</p>`
+    let html = "<ul>"
+    for (const cf of changedFields) {
+      html += `<li style="margin-bottom: 0.25rem;"><strong>${getFriendlyLabel(cf.key)}</strong>: `
+      if (cf.oldVal === undefined) {
+        html += `Set to <strong>${cf.newVal}</strong>`
+      } else if (cf.newVal === undefined || cf.newVal === null) {
+        html += `Removed (was <strong>${cf.oldVal}</strong>)`
       } else {
-        return `<p>${label} changed from <strong>${cf.oldVal}</strong> to <strong>${cf.newVal}</strong></p>`
+        html += `Changed from <strong>${cf.oldVal}</strong> to <strong>${cf.newVal}</strong>`
       }
+      html += "</li>"
     }
-
-    // If multiple fields changed
-    const labels = changedFields.map((cf) => getFriendlyLabel(cf.key))
-    return `<p>${changedFields.length} properties changed including ${labels.join(", ")}</p>`
+    html += "</ul>"
+    return html
   }
 
   function getFriendlyLabel(key: string) {
     const colConfig = tableConfig?.model?.[key]
-    if (colConfig && colConfig.label) {
-      return colConfig.label
-    }
+    if (colConfig?.label) return colConfig.label
     return key
   }
 
@@ -161,17 +145,26 @@
     goto(`/app/data/${table}`)
   }
 
-  // Returns a color-coded class for the operation
-  function getOperationClass(operation: string) {
+  // Color-coded border for the circle icon
+  function getOperationColor(operation: string) {
     switch (operation.toUpperCase()) {
       case "INSERT":
-        return "text-green-500"
+        return "-green-500"
       case "DELETE":
-        return "text-red-500"
+        return "-red-500"
       case "UPDATE":
       default:
-        return "text-blue-500"
+        return "-blue-500"
     }
+  }
+
+  function toggleExpand(changeId: string) {
+    expandedChanges[changeId] = !expandedChanges[changeId]
+  }
+
+  // Example "More Info" action
+  function goToChangeDetail(changeId: string) {
+    alert(`Navigate to detail of change ID: ${changeId}`)
   }
 </script>
 
@@ -188,9 +181,7 @@
 
       {#each Object.entries(rowData) as [column, originalValue]}
         <div class="form-group">
-          <label>
-            {tableConfig?.model?.[column]?.label || column}
-          </label>
+          <label>{tableConfig?.model?.[column]?.label || column}</label>
 
           {#if getInputType(column) === "checkbox"}
             <input
@@ -225,60 +216,85 @@
     </div>
   </div>
 
-  <!-- Right Column: Preview Widgets -->
+  <!-- Right Column: Custom Vertical Timeline for Recent Changes -->
   <div class="record-sidebar">
-    <!-- Recent Changes Widget using DaisyUI Timeline -->
     <div class="sidebar-card">
-      <h2 class="sidebar-card-title">Recent Changes</h2>
+      <h2 class="sidebar-card-title mb-3">Recent Changes</h2>
+
       {#if recentChanges.length > 0}
-        <ul class="timeline timeline-vertical">
-          {#each recentChanges as change, i}
-            <li>
-              {#if i !== 0}
-                <hr />
-              {/if}
-              <div class="timeline-start {getOperationClass(change.operation)}">
-                {change.operation}
-              </div>
-              <div class="timeline-middle">
-                <!-- Icon (you could change it based on operation) -->
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div class="timeline-end timeline-box">
-                <div class="human-log">
-                  {@html renderChangeSummary(
-                    change.record_before,
-                    change.record_after,
-                  )}
+        <div class="my-timeline">
+          {#each recentChanges as change}
+            <div class="my-timeline-item">
+              <!-- The circle icon on the vertical line, color-coded
+              <div
+                class="my-timeline-icon border{getOperationColor(
+                  change.operation,
+                )}"
+              ></div> -->
+
+              <!-- The main content block -->
+              <div class="my-timeline-content">
+                <!-- Date of the change -->
+                <div class="flex justify-between items-center mb-1">
+                  <div class="text-xs text-gray-500">
+                    {new Date(change.created_at).toLocaleString()}
+                  </div>
+                  <div>
+                    <span
+                      class="text-sm font-bold uppercase font-[Departure] text{getOperationColor(
+                        change.operation,
+                      )}"
+                    >
+                      {change.operation}</span
+                    >
+                  </div>
                 </div>
+
+                <p class="text-sm mb-2">
+                  {shortSummary(change.record_before, change.record_after)}
+                </p>
+
+                <!-- Buttons for "Show Details" and "More Info" -->
+                <div class="flex items-center gap-2">
+                  <button
+                    class="btn btn-xs"
+                    on:click={() => toggleExpand(change.id)}
+                  >
+                    {expandedChanges[change.id]
+                      ? "Hide Details"
+                      : "Show Details"}
+                  </button>
+                  <button
+                    class="btn btn-xs"
+                    on:click={() => goToChangeDetail(change.id)}
+                  >
+                    More Info
+                  </button>
+                </div>
+
+                <!-- Expanded details -->
+                {#if expandedChanges[change.id]}
+                  <div class="bg-white border p-2 rounded text-sm mt-2">
+                    {@html renderChangeSummary(
+                      change.record_before,
+                      change.record_after,
+                    )}
+                  </div>
+                {/if}
               </div>
-              <!-- If you want a trailing <hr/> for all but the last item, you can do it here -->
-            </li>
+            </div>
           {/each}
-        </ul>
+        </div>
       {:else}
         <p>No recent changes.</p>
       {/if}
     </div>
 
-    <!-- Previous Workflows Widget -->
+    <!-- Additional widgets below, unchanged -->
     <div class="sidebar-card">
       <h2 class="sidebar-card-title">Previous Workflows</h2>
       <p>(Placeholder: no data yet)</p>
     </div>
-
-    <!-- Scheduled Workflows Widget -->
     <div class="sidebar-card">
       <h2 class="sidebar-card-title">Scheduled Workflows</h2>
       <p>(Placeholder: not yet implemented)</p>
@@ -293,7 +309,7 @@
 </div>
 
 <style>
-  /* Two-column layout (left main card, right sidebar) */
+  /* Layout: two columns */
   .record-container {
     display: flex;
     flex-wrap: wrap;
@@ -309,7 +325,7 @@
     min-width: 250px;
   }
 
-  /* Main content cards */
+  /* Main card styling */
   .main-card {
     background-color: #fff;
     border: 1px solid #ccc;
@@ -328,7 +344,7 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Form styling */
+  /* Form elements */
   .form-group {
     margin-bottom: 1rem;
   }
@@ -350,8 +366,8 @@
     background-color: #fafafa;
     border: 1px solid #ddd;
     border-radius: 6px;
-    padding: 1rem;
     margin-bottom: 1rem;
+    padding: 1rem;
   }
   .sidebar-card-title {
     font-size: 1.1rem;
@@ -359,25 +375,47 @@
     margin-bottom: 0.5rem;
   }
 
-  /* DaisyUI Timeline overrides if needed */
-  .timeline-start {
-    font-weight: bold;
+  /* Custom vertical timeline */
+  .my-timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
   }
-  .timeline-box {
-    padding: 0.5rem;
-    border-radius: 4px;
-    background: #fff;
-    border: 1px solid #ccc;
+  .my-timeline-item:last-child {
+    margin-bottom: 0;
+  }
+  /* The circle icon on the line */
+  .my-timeline-icon {
+    position: absolute;
+    left: -6px; /* center over the line */
+    top: 6px;
+    width: 18px;
+    height: 18px;
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    z-index: 1;
+  }
+  /* The content block to the right of the line */
+  .my-timeline-content {
+    background-color: #fefefe;
+    border: 1px solid #eee;
+    border-radius: 1px;
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    /* //margin-left: 1rem; small gap from the line */
   }
 
-  /* "Human log" styling for changes */
-  .human-log {
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    background-color: #fefefe;
-    border-radius: 4px;
-    font-size: 0.9rem;
+  /* Color-coded icon border for each operation */
+  .border-green-500 {
+    border-color: #22c55e !important;
+  }
+  .border-red-500 {
+    border-color: #ef4444 !important;
+  }
+  .border-blue-500 {
+    border-color: #3b82f6 !important;
   }
 
   /* Buttons */

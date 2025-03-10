@@ -62,6 +62,7 @@ export async function load({ locals, params, url }) {
 
     console.log(`Total records in table ${table}:`, totalRecords);
     console.log(`Config for table ${table}:`, tableConfig);
+    console.log(`Fetched ${JSON.stringify(recordsRes.rows[0])} records from table ${table}`);
 
 
     await client.end();
