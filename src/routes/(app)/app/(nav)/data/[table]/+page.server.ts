@@ -33,7 +33,7 @@ export async function load({ locals, params, url }) {
   }
 
   const page = parseInt(url.searchParams.get('page')) || 1;
-  const limit = 50;
+  const limit = 10;
   const offset = (page - 1) * limit;
 
   let client;

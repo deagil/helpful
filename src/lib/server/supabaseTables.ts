@@ -11,6 +11,7 @@ export async function fetchUserTables(supabaseServiceRole, userId) {
     .select('config')
     .eq('user_id', userId)
     .eq('app', 'supabase')
+    .eq('enabled', '1')
     .single();
 
   if (dbError || !data) {
@@ -27,6 +28,7 @@ export async function fetchUserTables(supabaseServiceRole, userId) {
   let client;
   try {
     let ssl = decryptedConfig.useSSL ? { rejectUnauthorized: false } : false;
+    console.log(`SSL: ` + ssl);
     client = new Client({ connectionString, ssl });
     await client.connect();
 

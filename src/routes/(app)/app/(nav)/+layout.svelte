@@ -131,69 +131,41 @@
             </a>
           </li>
         {/if}
-
-        <!-- Workflows with Submenu -->
-        <li class="relative">
-          <div class="flex items-center justify-between">
-            <a
-              href="/app/workflows"
-              class={`${
-                adminSection === "workflows" ? "active" : ""
-              } flex items-center gap-2`}
-              onclick={closeDrawer}
-            >
-              🌊 Flows
-            </a>
-            <button
-              class="btn btn-sm btn-ghost ml-2"
-              aria-label="Toggle submenu"
-              onclick={() => (submenuOpen = !submenuOpen)}
-            >
-              {submenuOpen ? "−" : "+"}
-            </button>
-          </div>
-          {#if submenuOpen}
-            <ul
-              class="absolute left-full top-0 mt-2 dropdown-content menu p-2 shadow-lg bg-base-100 border border-gray-300 rounded-lg z-10 w-52 lg:mt-2 lg:left-auto lg:right-0"
-            >
-              <li>
-                <a
-                  href="/app/workflows/flows"
-                  class="hover:bg-gray-100 flex items-center gap-2"
-                  onclick={closeDrawer}
-                >
-                  ▶️ Workflows
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/app/workflows/functions"
-                  class="hover:bg-gray-100 flex items-center gap-2"
-                  onclick={closeDrawer}
-                >
-                  👨🏽‍💻 Functions
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/app/workflows/events"
-                  class="hover:bg-gray-100 flex items-center gap-2"
-                  onclick={closeDrawer}
-                >
-                  📅 Events
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/app/workflows/actions"
-                  class="hover:bg-gray-100 flex items-center gap-2"
-                  onclick={closeDrawer}
-                >
-                  ⚡ Actions
-                </a>
-              </li>
-            </ul>
-          {/if}
+        <li>
+          <a
+            href="/app/workflows/events"
+            class={adminSection === "events" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            💥 Event Triggers
+          </a>
+        </li>
+        <li>
+          <a
+            href="/app/workflows/actions"
+            class={adminSection === "actions" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            👂 Event Listeners
+          </a>
+        </li>
+        <li>
+          <a
+            href="/app/workflows/functions"
+            class={adminSection === "functions" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            👨🏽‍💻 Functions
+          </a>
+        </li>
+        <li>
+          <a
+            href="/app/workflows/flows"
+            class={adminSection === "workflows" ? "active" : ""}
+            onclick={closeDrawer}
+          >
+            ▶️ Workflows
+          </a>
         </li>
         <li>
           <a

@@ -9,7 +9,13 @@
 
   function goToPage(page: number) {
     if (page < 1 || page > totalPages) return
-    goto(`?page=${page}`)
+    location.href = `/app/data/${tableConfig.name}?page=${page}`
+  }
+
+  function calculateRange(records, currentPage) {
+    const start = Math.min((currentPage - 1) * 10 + 1, totalRecords)
+    const end = Math.min(currentPage * 10, totalRecords)
+    return `${start}-${end}`
   }
 
   // Check if a string is a valid URL
@@ -138,7 +144,8 @@
 </div>
 
 <p class="mb-4 mt-2 text-xs text-gray-600 font-[Departure] uppercase">
-  Showing {records.length} of {totalRecords} records (Page {currentPage} of {totalPages})
+  Showing {calculateRange(records, currentPage)} of {totalRecords} records (Page
+  {currentPage} of {totalPages})
 </p>
 
 <div class="flex justify-between items-center mt-4">

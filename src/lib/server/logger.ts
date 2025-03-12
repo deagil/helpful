@@ -58,10 +58,14 @@ async function logToUserDatabase(logEntry: any, event: RequestEvent) {
     .select('config')
     .eq('user_id', user.id)
     .eq('app', 'supabase')
+    .eq('enabled', '1')
     .single();
 
+  console.log(`data: ` + data);
+  console.log(`error: ` + dbError?.message);
+
   if (dbError || !data) {
-    console.error('Error fetching user database configuration:', dbError);
+    console.error(`Error fetching user database configuration: ${dbError.message}`, dbError);
     return;
   }
 
